@@ -1,0 +1,7 @@
+# The venue's contracts and keeper are deployed by Foundry and Railway, not by
+# Vercel. Uploading them only slows the build down and puts source on a host
+# that has no use for it.
+backend/
+
+# The vault is documentation for us, not for the edge.
+obsidian/

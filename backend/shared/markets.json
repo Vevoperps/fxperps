@@ -1,0 +1,642 @@
+[
+  {
+    "symbol": "USDJPY",
+    "name": "Japan",
+    "flag": "jp",
+    "maxLeverage": 25,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "147310000000000000000"
+  },
+  {
+    "symbol": "USDEUR",
+    "name": "Euro area",
+    "flag": "eu",
+    "maxLeverage": 25,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "918200000000000000"
+  },
+  {
+    "symbol": "USDGBP",
+    "name": "UK",
+    "flag": "gb",
+    "maxLeverage": 25,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "778400000000000000"
+  },
+  {
+    "symbol": "USDCHF",
+    "name": "Switzerland",
+    "flag": "ch",
+    "maxLeverage": 25,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "846100000000000000"
+  },
+  {
+    "symbol": "USDCAD",
+    "name": "Canada",
+    "flag": "ca",
+    "maxLeverage": 25,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "1374200000000000000"
+  },
+  {
+    "symbol": "USDAUD",
+    "name": "Australia",
+    "flag": "au",
+    "maxLeverage": 25,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "1513300000000000000"
+  },
+  {
+    "symbol": "USDNZD",
+    "name": "New Zealand",
+    "flag": "nz",
+    "maxLeverage": 20,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "1660400000000000000"
+  },
+  {
+    "symbol": "USDSEK",
+    "name": "Sweden",
+    "flag": "se",
+    "maxLeverage": 20,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "10412000000000000000"
+  },
+  {
+    "symbol": "USDNOK",
+    "name": "Norway",
+    "flag": "no",
+    "maxLeverage": 20,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "10733000000000000000"
+  },
+  {
+    "symbol": "USDDKK",
+    "name": "Denmark",
+    "flag": "dk",
+    "maxLeverage": 20,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "6847100000000000000"
+  },
+  {
+    "symbol": "USDCNY",
+    "name": "China",
+    "flag": "cn",
+    "maxLeverage": 15,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "7120400000000000000"
+  },
+  {
+    "symbol": "USDHKD",
+    "name": "Hong Kong",
+    "flag": "hk",
+    "maxLeverage": 20,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "7790200000000000000"
+  },
+  {
+    "symbol": "USDSGD",
+    "name": "Singapore",
+    "flag": "sg",
+    "maxLeverage": 20,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "1287100000000000000"
+  },
+  {
+    "symbol": "USDKRW",
+    "name": "Korea",
+    "flag": "kr",
+    "maxLeverage": 15,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "1342800000000000000000"
+  },
+  {
+    "symbol": "USDTWD",
+    "name": "Taiwan",
+    "flag": "tw",
+    "maxLeverage": 15,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "31842000000000000000"
+  },
+  {
+    "symbol": "USDINR",
+    "name": "India",
+    "flag": "in",
+    "maxLeverage": 15,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "87214000000000000000"
+  },
+  {
+    "symbol": "USDTHB",
+    "name": "Thailand",
+    "flag": "th",
+    "maxLeverage": 12,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "33517000000000000000"
+  },
+  {
+    "symbol": "USDIDR",
+    "name": "Indonesia",
+    "flag": "id",
+    "maxLeverage": 10,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "16284000000000000000000"
+  },
+  {
+    "symbol": "USDMYR",
+    "name": "Malaysia",
+    "flag": "my",
+    "maxLeverage": 12,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "4218300000000000000"
+  },
+  {
+    "symbol": "USDPHP",
+    "name": "Philippines",
+    "flag": "ph",
+    "maxLeverage": 10,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "57412000000000000000"
+  },
+  {
+    "symbol": "USDVND",
+    "name": "Vietnam",
+    "flag": "vn",
+    "maxLeverage": 8,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "25384000000000000000000"
+  },
+  {
+    "symbol": "USDPKR",
+    "name": "Pakistan",
+    "flag": "pk",
+    "maxLeverage": 6,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "278410000000000000000"
+  },
+  {
+    "symbol": "USDBDT",
+    "name": "Bangladesh",
+    "flag": "bd",
+    "maxLeverage": 6,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "119820000000000000000"
+  },
+  {
+    "symbol": "USDKZT",
+    "name": "Kazakhstan",
+    "flag": "kz",
+    "maxLeverage": 6,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "478210000000000000000"
+  },
+  {
+    "symbol": "USDMNT",
+    "name": "Mongolia",
+    "flag": "mn",
+    "maxLeverage": 4,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "3418200000000000000000"
+  },
+  {
+    "symbol": "USDPLN",
+    "name": "Poland",
+    "flag": "pl",
+    "maxLeverage": 15,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "3912400000000000000"
+  },
+  {
+    "symbol": "USDCZK",
+    "name": "Czechia",
+    "flag": "cz",
+    "maxLeverage": 15,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "22841000000000000000"
+  },
+  {
+    "symbol": "USDHUF",
+    "name": "Hungary",
+    "flag": "hu",
+    "maxLeverage": 12,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "361420000000000000000"
+  },
+  {
+    "symbol": "USDRON",
+    "name": "Romania",
+    "flag": "ro",
+    "maxLeverage": 10,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "4571200000000000000"
+  },
+  {
+    "symbol": "USDTRY",
+    "name": "Turkey",
+    "flag": "tr",
+    "maxLeverage": 4,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "38412000000000000000"
+  },
+  {
+    "symbol": "USDUAH",
+    "name": "Ukraine",
+    "flag": "ua",
+    "maxLeverage": 4,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "41284000000000000000"
+  },
+  {
+    "symbol": "USDAMD",
+    "name": "Armenia",
+    "flag": "am",
+    "maxLeverage": 5,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "387210000000000000000"
+  },
+  {
+    "symbol": "USDMXN",
+    "name": "Mexico",
+    "flag": "mx",
+    "maxLeverage": 12,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "18412000000000000000"
+  },
+  {
+    "symbol": "USDBRL",
+    "name": "Brazil",
+    "flag": "br",
+    "maxLeverage": 10,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "5421800000000000000"
+  },
+  {
+    "symbol": "USDARS",
+    "name": "Argentina",
+    "flag": "ar",
+    "maxLeverage": 3,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "1284200000000000000000"
+  },
+  {
+    "symbol": "USDCLP",
+    "name": "Chile",
+    "flag": "cl",
+    "maxLeverage": 8,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "941280000000000000000"
+  },
+  {
+    "symbol": "USDCOP",
+    "name": "Colombia",
+    "flag": "co",
+    "maxLeverage": 6,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "4182400000000000000000"
+  },
+  {
+    "symbol": "USDPEN",
+    "name": "Peru",
+    "flag": "pe",
+    "maxLeverage": 8,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "3712400000000000000"
+  },
+  {
+    "symbol": "USDUYU",
+    "name": "Uruguay",
+    "flag": "uy",
+    "maxLeverage": 5,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "40218000000000000000"
+  },
+  {
+    "symbol": "USDPYG",
+    "name": "Paraguay",
+    "flag": "py",
+    "maxLeverage": 4,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "7681200000000000000000"
+  },
+  {
+    "symbol": "USDDOP",
+    "name": "Dominican Republic",
+    "flag": "do",
+    "maxLeverage": 5,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "60412000000000000000"
+  },
+  {
+    "symbol": "USDCRC",
+    "name": "Costa Rica",
+    "flag": "cr",
+    "maxLeverage": 5,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "512840000000000000000"
+  },
+  {
+    "symbol": "USDJMD",
+    "name": "Jamaica",
+    "flag": "jm",
+    "maxLeverage": 4,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "157210000000000000000"
+  },
+  {
+    "symbol": "USDGTQ",
+    "name": "Guatemala",
+    "flag": "gt",
+    "maxLeverage": 5,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "7712400000000000000"
+  },
+  {
+    "symbol": "USDSAR",
+    "name": "Saudi Arabia",
+    "flag": "sa",
+    "maxLeverage": 20,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "3750300000000000000"
+  },
+  {
+    "symbol": "USDAED",
+    "name": "United Arab Emirates",
+    "flag": "ae",
+    "maxLeverage": 20,
+    "skewScale": 2000000,
+    "maxOpenInterest": 5000000,
+    "minMargin": 10,
+    "seedPrice": "3672500000000000000"
+  },
+  {
+    "symbol": "USDQAR",
+    "name": "Qatar",
+    "flag": "qa",
+    "maxLeverage": 15,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "3641200000000000000"
+  },
+  {
+    "symbol": "USDKWD",
+    "name": "Kuwait",
+    "flag": "kw",
+    "maxLeverage": 15,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "306200000000000000"
+  },
+  {
+    "symbol": "USDBHD",
+    "name": "Bahrain",
+    "flag": "bh",
+    "maxLeverage": 15,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "377100000000000000"
+  },
+  {
+    "symbol": "USDOMR",
+    "name": "Oman",
+    "flag": "om",
+    "maxLeverage": 15,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "384500000000000000"
+  },
+  {
+    "symbol": "USDJOD",
+    "name": "Jordan",
+    "flag": "jo",
+    "maxLeverage": 10,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "709100000000000000"
+  },
+  {
+    "symbol": "USDILS",
+    "name": "Israel",
+    "flag": "il",
+    "maxLeverage": 10,
+    "skewScale": 500000,
+    "maxOpenInterest": 1000000,
+    "minMargin": 10,
+    "seedPrice": "3628400000000000000"
+  },
+  {
+    "symbol": "USDZAR",
+    "name": "South Africa",
+    "flag": "za",
+    "maxLeverage": 8,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "17842000000000000000"
+  },
+  {
+    "symbol": "USDNGN",
+    "name": "Nigeria",
+    "flag": "ng",
+    "maxLeverage": 4,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "1541200000000000000000"
+  },
+  {
+    "symbol": "USDEGP",
+    "name": "Egypt",
+    "flag": "eg",
+    "maxLeverage": 4,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "48412000000000000000"
+  },
+  {
+    "symbol": "USDKES",
+    "name": "Kenya",
+    "flag": "ke",
+    "maxLeverage": 5,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "129180000000000000000"
+  },
+  {
+    "symbol": "USDGHS",
+    "name": "Ghana",
+    "flag": "gh",
+    "maxLeverage": 4,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "12418000000000000000"
+  },
+  {
+    "symbol": "USDMAD",
+    "name": "Morocco",
+    "flag": "ma",
+    "maxLeverage": 8,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "9841200000000000000"
+  },
+  {
+    "symbol": "USDTND",
+    "name": "Tunisia",
+    "flag": "tn",
+    "maxLeverage": 5,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "3128400000000000000"
+  },
+  {
+    "symbol": "USDDZD",
+    "name": "Algeria",
+    "flag": "dz",
+    "maxLeverage": 4,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "134210000000000000000"
+  },
+  {
+    "symbol": "USDTZS",
+    "name": "Tanzania",
+    "flag": "tz",
+    "maxLeverage": 3,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "2684200000000000000000"
+  },
+  {
+    "symbol": "USDUGX",
+    "name": "Uganda",
+    "flag": "ug",
+    "maxLeverage": 3,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "3712800000000000000000"
+  },
+  {
+    "symbol": "USDZMW",
+    "name": "Zambia",
+    "flag": "zm",
+    "maxLeverage": 3,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "26412000000000000000"
+  },
+  {
+    "symbol": "USDMUR",
+    "name": "Mauritius",
+    "flag": "mu",
+    "maxLeverage": 4,
+    "skewScale": 100000,
+    "maxOpenInterest": 250000,
+    "minMargin": 10,
+    "seedPrice": "46218000000000000000"
+  }
+]

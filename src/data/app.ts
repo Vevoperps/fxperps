@@ -1,0 +1,241 @@
+/**
+ * Every word the app says, in one file, the way `content.ts` holds the
+ * landing page's.
+ *
+ * The preview banner is not decoration. Nothing that moves money is on yet and
+ * the marks are generated rather than fetched, and a venue that does not say so
+ * on every screen is lying by omission — so the line lives here, once, and
+ * every screen prints it.
+ */
+
+import { brand } from "@/lib/brand";
+
+export const app = {
+  chip: "FX perps",
+  /**
+   * Printed across the top of every app screen.
+   *
+   * Two states, and the app is honest about which one it is in. `preview` is
+   * the default: generated marks and every money button off. `live` is what
+   * shows once an engine address is configured — and on a development chain it
+   * says that too, because a demo that looks like the real thing is how
+   * somebody ends up thinking their test balance is money.
+   */
+  banner:
+    "this is a read-only preview. prices are simulated until the feed is connected, and deposits, orders and withdrawals are off.",
+  bannerLive: (chain: string) =>
+    `live on ${chain.toLowerCase()}. every price, balance and position on this screen is read from the contract.`,
+  bannerLocal:
+    "connected to a local development chain. the settlement token here is a mock with an open faucet and is worth nothing.",
+  /**
+   * `ready: false` prints the item and refuses to link it. A nav that leads to
+   * a 404 is worse than one that says a screen is still being built.
+   */
+  nav: [
+    { href: "/app", label: "Home", ready: true },
+    { href: "/app/pairs", label: "All pairs", ready: true },
+    { href: "/app/portfolio", label: "Portfolio", ready: true },
+  ],
+
+  wallet: {
+    connect: "Connect wallet",
+    /** Shown above the list when at least one wallet announced itself. */
+    pick: "Choose a wallet",
+    none: "No wallet detected in this browser",
+    ready: "Connect",
+    waiting: "Waiting…",
+    install: "Install",
+    refused: "the wallet refused the connection. nothing was signed.",
+    disconnect: "Disconnect",
+    wrongChain: (chain: string) => `Switch to ${chain}`,
+    chainRefused: (chain: string) =>
+      `the wallet would not switch to ${chain.toLowerCase()}. add it manually and try again.`,
+    note: (chain: string) =>
+      `connecting only proves the address is yours. ${chain.toLowerCase()} is added on your first deposit, and deposits are off in this preview.`,
+    noteLive: (chain: string) =>
+      `connecting only proves the address is yours. nothing moves on ${chain.toLowerCase()} until you sign a deposit, and no one but you can move your balance afterwards.`,
+    /**
+     * The wallets worth naming when none is installed.
+     *
+     * `rdns` is matched against what a wallet announces, so an installed one is
+     * never listed twice — an installed wallet shows the icon it ships itself,
+     * and these files are only for the ones that are not here to speak for
+     * themselves. Each is that wallet's own mark, used to identify it in a
+     * picker, which is what a brand mark is for.
+     */
+    known: [
+      {
+        rdns: "io.metamask",
+        name: "MetaMask",
+        icon: "/assets/wallets/metamask.webp",
+        install: "https://metamask.io/download/",
+      },
+      {
+        rdns: "app.phantom",
+        name: "Phantom",
+        icon: "/assets/wallets/phantom.webp",
+        install: "https://phantom.com/download",
+      },
+      {
+        rdns: "com.coinbase",
+        name: "Coinbase Wallet",
+        icon: "/assets/wallets/coinbase.webp",
+        install: "https://www.coinbase.com/wallet/downloads",
+      },
+      {
+        rdns: "io.rabby",
+        name: "Rabby",
+        icon: "/assets/wallets/rabby.webp",
+        install: "https://rabby.io/",
+      },
+    ],
+  },
+
+  home: {
+    badge: "Read-only preview · 64 pairs",
+    /** Once the marks are the engine's own. */
+    badgeLive: (count: number) => `Live · ${count} pairs onchain`,
+    heading: "Pick a currency",
+    lede: `every pair is quoted against the us dollar and trades 24/7 from one ${brand.chain.settlement} balance. choose one to open the terminal.`,
+    primary: "All pairs",
+    secondary: "How to start",
+    ratesTitle: "Live rates",
+    ratesHint: "click a pair to trade",
+    ratesNote: "sorted by 24h move · refreshes every 15s",
+    live: (count: number) => `${count} pairs live`,
+    columns: {
+      pair: "Pair",
+      currency: "Currency",
+      mark: "Mark",
+      change: "24h",
+      funding: "Funding",
+      leverage: "Max lev",
+    },
+    empty: "loading rates",
+    failed: "feed paused, showing the last known list",
+  },
+
+  pairs: {
+    title: "All pairs",
+    heading: "Every currency, one balance",
+    lede: "64 pairs across five regions, each against the dollar. the cap beside a country is its leverage limit.",
+    count: (n: number) => `${n} pairs`,
+  },
+
+  market: {
+    /** The line under the pair name, per side. */
+    kind: "FX / 24/7 / perpetual",
+    describe: (symbol: string, currency: string) =>
+      `long ${symbol.toLowerCase()} profits when the us dollar rises against the ${currency}. trades 24/7.`,
+    back: "All pairs",
+    stats: {
+      last: "Last",
+      change: "24h",
+      funding: "Funding 8h",
+      interest: "Open interest",
+      session: "Session",
+    },
+    session: "24/7, feed paused",
+    /** Once the marks come off the chain, the session really is just 24/7. */
+    sessionLive: "24/7",
+    /** The chip beside the pair name: what this market is doing right now. */
+    state: {
+      preview: "Preview",
+      live: "Live",
+      paused: "Paused",
+      closed: "No price",
+    } as Record<string, string>,
+    chartNote: "local currency per usd",
+    marketsTitle: ["The currency,", "one balance"],
+    marketsLede: `every fx pair trades 24/7 from your one ${brand.chain.settlement} balance.`,
+    columns: {
+      market: "Market",
+      status: "Status",
+      mark: "Mark",
+      change: "24h",
+      funding: "Funding 8h",
+      longs: "Long OI",
+      shorts: "Short OI",
+      session: "Session",
+      leverage: "Max lev",
+    },
+    notFound: "That pair is not listed.",
+  },
+
+  ticket: {
+    long: "Long",
+    short: "Short",
+    marginLabel: (asset: string, idle: string) =>
+      `Margin, ${asset} · idle ${idle}`,
+    leverage: "Leverage",
+    entry: "entry",
+    entryValue: "next live print",
+    notional: "notional",
+    liquidation: "liquidation",
+    fee: "fee 0.05%",
+    payout: "max payout",
+    payoutValue: (amount: string) => `up to ${amount}`,
+    note: "profit is capped at max payout, fixed when your position opens.",
+    capNote: (leverage: number) =>
+      `capped at ${leverage}x. this pair moves far enough that a higher cap would liquidate on an ordinary day.`,
+    action: "Deposits not live yet",
+
+    /** The live states, in the order a first trade meets them. */
+    connect: "Connect a wallet",
+    switchChain: (chain: string) => `Switch to ${chain}`,
+    fund: "Deposit first",
+    open: (side: "long" | "short") =>
+      side === "long" ? "Open long" : "Open short",
+    working: "Confirm in your wallet…",
+    close: "Close position",
+    closing: "Closing…",
+    openPosition: "Open position",
+    unpriced: "no price for this pair yet",
+    yours: {
+      side: "side",
+      size: "notional",
+      entry: "entry",
+      mark: "mark",
+      pnl: "unrealised",
+      funding: "funding",
+      liquidation: "liquidation",
+    },
+  },
+
+  portfolio: {
+    title: "Portfolio",
+    heading: ["One balance,", "every market"],
+    lede: "fx perps, net of fees and funding.",
+    total: `Total PNL, ${brand.chain.settlement}`,
+    tiles: {
+      unrealised: "Unrealised",
+      realised: "Realised",
+      staked: "In open stakes",
+      idle: "Idle, withdrawable",
+    },
+    transfers: (asset: string, idle: string) =>
+      `${asset} transfers. Idle balance ${idle}, withdrawable`,
+    deposit: "Deposit",
+    withdraw: "Withdraw",
+    /** Local chains only: the mock settlement token's own faucet. */
+    faucet: "Faucet 10,000",
+    columns: {
+      pair: "Pair",
+      side: "Side",
+      notional: "Notional",
+      entry: "Entry",
+      mark: "Mark",
+      pnl: "Unrealised",
+      liquidation: "Liquidation",
+    },
+    tabs: ["Positions", "Orders", "History", "Transfers"],
+    empty: {
+      Positions: "0 open positions.",
+      Orders:
+        "0 resting orders. this venue fills at the mark, so orders do not rest.",
+      History: "0 closed positions.",
+      Transfers: "0 deposits or withdrawals.",
+    } as Record<string, string>,
+    connect: "Connect a wallet to see your portfolio.",
+  },
+} as const;

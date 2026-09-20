@@ -1,0 +1,242 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   TIER 1 — PRIMITIVES  (`--raw-*`)
+   Raw literal values. The only tier allowed to contain a hex/px/ms literal.
+   Never referenced in markup, never bound into @theme.
+
+   Values are the reference's own, read out of its markup by frequency.
+   `--raw-color-rule` is the most-used colour on that site by an order of
+   magnitude, which is the whole point: the design is carried by hairlines,
+   not by fills.
+   --------------------------------------------------------------------------- */
+:root {
+  --raw-color-white: #ffffff;
+  --raw-color-black: #000000;
+
+  /* The one accent. Everything else on the page is black, white or grey. */
+  --raw-color-blue-500: #0055ff;
+  --raw-color-blue-400: #0099ff;
+  /* Darker blues for the load curtain's flood, so it reads as depth rather
+     than as a flat fill. */
+  --raw-color-blue-700: #003a9e;
+  --raw-color-blue-600: #0043cc;
+
+  --raw-color-ink-900: #1a1a1a;
+  --raw-color-ink-800: #202020;
+  --raw-color-rule-dark: #474747;
+  --raw-color-rule-light: #e0e0e0;
+
+  /* The two colours a trading screen cannot do without.
+     Everything else on this site is black, white, grey and the one blue, and
+     these stay out of the marketing pages entirely — but a result that can go
+     either way has to be readable at a glance, and blue-for-profit is not a
+     convention any trader reads. Both are desaturated enough to sit inside the
+     palette rather than shout over it, and both clear contrast on #1a1a1a and
+     on white. */
+  --raw-color-red-500: #e5484d;
+  --raw-color-green-500: #30a46c;
+
+  --raw-color-grey-400: #adadad;
+  --raw-color-grey-500: #7a7a7a;
+  --raw-color-grey-300: #cccccc;
+  --raw-color-paper-100: #f5f5f5;
+
+  /* Cast by an object lying on a surface, not by a card floating over one:
+     deep enough to read on ink, soft enough to have no edge of its own. */
+  --raw-color-shadow-deep: rgb(0 0 0 / 0.55);
+
+  --raw-space-shell: 1.25rem;
+  --raw-space-gutter: 1.875rem;
+  --raw-size-topbar: 3.4375rem;
+
+  --raw-duration-fast: 150ms;
+  --raw-duration-normal: 250ms;
+  --raw-duration-slow: 420ms;
+}
+
+/* ---------------------------------------------------------------------------
+   TIER 2 — SEMANTIC  (role names)
+   Purpose, not appearance. Always `var(--raw-*)`, never a literal.
+
+   The page alternates three surfaces — ink, paper, paper-alt — and each
+   carries its own rule and dim-text colour, because a hairline that reads on
+   #1a1a1a is invisible on white and vice versa.
+   --------------------------------------------------------------------------- */
+:root {
+  --background: var(--raw-color-white);
+  --foreground: var(--raw-color-ink-900);
+
+  --accent: var(--raw-color-blue-500);
+  --accent-soft: var(--raw-color-blue-400);
+
+  /* A result, a warning, a side. Only the app screens use these. */
+  --negative: var(--raw-color-red-500);
+  --positive: var(--raw-color-green-500);
+
+  --surface-ink: var(--raw-color-ink-900);
+  --surface-ink-2: var(--raw-color-ink-800);
+  --surface-paper: var(--raw-color-white);
+  --surface-paper-2: var(--raw-color-paper-100);
+
+  --rule-on-ink: var(--raw-color-rule-dark);
+  --rule-on-paper: var(--raw-color-rule-light);
+
+  --ink-on-ink: var(--raw-color-white);
+  --dim-on-ink: var(--raw-color-grey-400);
+  --dim-on-paper: var(--raw-color-grey-500);
+  --faint: var(--raw-color-grey-300);
+
+  /* The load curtain floods white with these — see components/common/preloader. */
+  --backdrop-wave-low: var(--raw-color-blue-700);
+  --backdrop-wave-high: var(--raw-color-blue-500);
+  --surface-invert: var(--raw-color-white);
+
+  /* Under the printed ticket as it leaves the slot. Used through `var()` in a
+     `drop-shadow`, so it is never bound into a Tailwind namespace. */
+  --shadow-paper: var(--raw-color-shadow-deep);
+
+  --shell-inset: var(--raw-space-shell);
+  --shell-gutter: var(--raw-space-gutter);
+  --topbar: var(--raw-size-topbar);
+
+  --duration-fast: var(--raw-duration-fast);
+  --duration-normal: var(--raw-duration-normal);
+  --duration-slow: var(--raw-duration-slow);
+}
+
+/* ---------------------------------------------------------------------------
+   THEME BINDINGS — map semantic tokens into Tailwind namespaces.
+   Every entry is exactly `--<tw-namespace>-<role>: var(--<role>)`.
+   There is NO `--duration-*` namespace in Tailwind v4 — durations stay Tier 2
+   and are used as `duration-[var(--duration-fast)]`.
+   --------------------------------------------------------------------------- */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-negative: var(--negative);
+  --color-positive: var(--positive);
+
+  --color-surface-ink: var(--surface-ink);
+  --color-surface-ink-2: var(--surface-ink-2);
+  --color-surface-paper: var(--surface-paper);
+  --color-surface-paper-2: var(--surface-paper-2);
+
+  --color-rule-ink: var(--rule-on-ink);
+  --color-rule-paper: var(--rule-on-paper);
+
+  --color-ink-on-ink: var(--ink-on-ink);
+  --color-dim-ink: var(--dim-on-ink);
+  --color-dim-paper: var(--dim-on-paper);
+  --color-faint: var(--faint);
+
+  --color-backdrop-wave-low: var(--backdrop-wave-low);
+  --color-backdrop-wave-high: var(--backdrop-wave-high);
+  --color-surface-invert: var(--surface-invert);
+
+  --spacing-shell-inset: var(--shell-inset);
+  --spacing-shell-gutter: var(--shell-gutter);
+  --spacing-topbar: var(--topbar);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-pixel);
+
+  --leading-display: 1.05;
+  --ease-entrance: cubic-bezier(0.2, 0, 0, 1);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  min-height: 100lvh;
+}
+
+@layer base {
+  /* Adaptive scaling grid — scales the root font-size with the viewport so a
+     rem-based layout stays proportional. Keep in sync with
+     src/components/common/grid/grid.config.ts. */
+  html {
+    font-size: 16px;
+  }
+
+  @media (max-width: 1920px) {
+    html {
+      font-size: 0.833333vw;
+    }
+  }
+
+  @media (max-width: 1440px) {
+    html {
+      font-size: 1.111111vw;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    html {
+      font-size: max(1.5625vw, 12px);
+    }
+  }
+
+  @media (max-width: 640px) {
+    html {
+      font-size: min(4.444444vw, 18px);
+    }
+  }
+}
+
+@layer utilities {
+  /* Keeps a deliberately low-resolution canvas crisp when it is scaled up, so
+     the load curtain's flood reads as pixels rather than as a blur. */
+  .pixelated {
+    image-rendering: pixelated;
+  }
+
+  /* The micro-label that carries the whole reference: mono, caps, widely
+     tracked, small. It appears on section markers, chips, table heads, stat
+     captions and buttons — enough places that it earns a class. */
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /* The track a step's rule fills along: a dashed hairline rather than a solid
+     grey one, so an unfilled step reads as pending instead of as a divider. */
+  .track-dots {
+    background-image: repeating-linear-gradient(
+      to right,
+      var(--rule-on-paper) 0 3px,
+      transparent 3px 7px
+    );
+  }
+
+  /* The same texture as a panel's own background rather than as an overlay.
+     `.dotfield` dims itself with `opacity`, which on a panel would take its
+     contents down with it — a card sitting on the ground has to stay at full
+     strength. */
+  .dotfield-panel {
+    background-color: var(--surface-paper-2);
+    background-image: radial-gradient(
+      var(--rule-on-paper) 1px,
+      transparent 1px
+    );
+    background-size: 8px 8px;
+  }
+
+  /* Dotted-grid texture, used as the ground under screenshots and empty cells. */
+  .dotfield {
+    background-image: radial-gradient(
+      currentColor 0.5px,
+      transparent 0.5px
+    );
+    background-size: 6px 6px;
+    opacity: 0.18;
+  }
+}

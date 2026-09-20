@@ -1,0 +1,389 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+import { Label } from "@/components/ui/label";
+import { app } from "@/data/app";
+import { usePosition, useVenueAccount } from "@/hooks/use-venue";
+import { brand } from "@/lib/brand";
+import {
+  closePosition,
+  explainRevert,
+  openPosition,
+} from "@/lib/chain/engine";
+import { money, signed, toAmount } from "@/lib/chain/units";
+import { venue } from "@/lib/chain/venue";
+import { useWallet } from "@/lib/chain/wallet";
+import { decimalsFor } from "@/views/home/use-markets";
+
+/**
+ * The order ticket: a side, a margin, a leverage, and the four numbers that
+ * decide whether the trade is worth taking.
+ *
+ * Every figure is computed from the same arithmetic the documentation states,
+ * so the page and the handbook can never disagree: notional is margin times
+ * leverage, the fee is 0.05% of notional, the liquidation price is the entry
+ * moved by one over the leverage less the maintenance margin, and the payout
+ * is capped at ten times the margin. The contract computes the same four from
+ * the same constants, so the ticket is a preview of the transaction rather
+ * than an illustration of one.
+ *
+ * **The action says exactly what it will do, or exactly why it will not.**
+ * Connect, switch chain, deposit, open — the button walks a first trade
+ * through each in the order it actually meets them. A venue that renders a
+ * live-looking button over a feature that does not exist is teaching its users
+ * that its buttons lie.
+ *
+ * With a position already open on this pair, the ticket becomes that position:
+ * its side, its size, what it is worth and how far it is from liquidation,
+ * with one button to close it. One pair, one isolated position — the engine
+ * enforces it, so the ticket shows it rather than offering a second.
+ */
+
+/** Charged on notional, each way. */
+const FEE = 0.0005;
+/** The floor equity is measured against, as a share of notional. */
+const MAINTENANCE = 0.005;
+/** The most a position can return, as a multiple of its margin. */
+const PAYOUT_CAP = 10;
+
+/**
+ * The fee, at a precision that shows it.
+ *
+ * Two decimals is right for a notional and wrong for a fee: 0.05% of a small
+ * position rounds to 0.00, which reads as free rather than as small.
+ */
+const fee = (value: number): string =>
+  value >= 1 ? money(value) : value.toFixed(4);
+
+export const Ticket = ({
+  mark,
+  maxLeverage,
+  symbol,
+}: {
+  mark: number;
+  maxLeverage: number;
+  /** The pair, as the engine names it. Omitted in the preview. */
+  symbol?: string;
+}) => {
+  const [side, setSide] = useState<"long" | "short">("long");
+  const [margin, setMargin] = useState("100");
+  const [leverage, setLeverage] = useState(Math.min(5, maxLeverage));
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const address = useWallet((state) => state.address);
+  const chainId = useWallet((state) => state.chainId);
+  const ensureChain = useWallet((state) => state.ensureChain);
+
+  const { snapshot, decimals, reload } = useVenueAccount();
+  const held = usePosition(symbol);
+
+  const figures = useMemo(() => {
+    const posted = Math.max(0, Number(margin) || 0);
+    const notional = posted * leverage;
+    // Liquidation sits where the adverse move has eaten everything above the
+    // maintenance floor: one over the leverage, less that floor.
+    const distance = Math.max(0, 1 / leverage - MAINTENANCE);
+    const liquidation =
+      side === "long" ? mark * (1 - distance) : mark * (1 + distance);
+
+    return {
+      posted,
+      notional,
+      liquidation,
+      fee: notional * FEE,
+      payout: posted * PAYOUT_CAP,
+    };
+  }, [margin, leverage, side, mark]);
+
+  const decimalPlaces = decimalsFor(mark || 1);
+  const idle = snapshot ? money(snapshot.free) : "0.00";
+
+  const run = async (action: () => Promise<void>): Promise<void> => {
+    setBusy(true);
+    setProblem(null);
+    try {
+      await action();
+      reload();
+    } catch (error) {
+      setProblem(explainRevert(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onOpen = () =>
+    void run(async () => {
+      if (!symbol) return;
+      await openPosition(
+        symbol,
+        side === "long",
+        toAmount(margin, decimals),
+        leverage,
+      );
+    });
+
+  const onClose = () =>
+    void run(async () => {
+      if (!symbol) return;
+      await closePosition(symbol);
+    });
+
+  return (
+    <aside className="flex h-full flex-col border border-rule-ink bg-surface-ink-2/40">
+      <div className="grid grid-cols-2 gap-px bg-rule-ink">
+        {(["long", "short"] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => setSide(option)}
+            aria-pressed={side === option}
+            disabled={held !== null}
+            className={`label py-3.5 transition-colors duration-[var(--duration-fast)] ease-entrance disabled:opacity-40 ${
+              side === option
+                ? "bg-accent text-ink-on-ink"
+                : "bg-surface-ink text-dim-ink hover:text-ink-on-ink"
+            }`}
+          >
+            {option === "long" ? app.ticket.long : app.ticket.short}
+          </button>
+        ))}
+      </div>
+
+      {held ? (
+        <PositionPanel
+          held={held}
+          decimals={decimalPlaces}
+          busy={busy}
+          problem={problem}
+          onClose={onClose}
+        />
+      ) : (
+        <div className="flex flex-1 flex-col gap-5 p-4">
+          <label className="flex flex-col gap-2">
+            <Label tone="ink">
+              {app.ticket.marginLabel(brand.chain.settlement, idle)}
+            </Label>
+            <input
+              inputMode="decimal"
+              value={margin}
+              onChange={(event) =>
+                setMargin(event.target.value.replace(/[^0-9.]/g, ""))
+              }
+              className="w-full border-b border-rule-ink bg-transparent pb-2 font-mono text-lg tabular-nums text-ink-on-ink outline-none transition-colors duration-[var(--duration-fast)] ease-entrance focus:border-accent"
+            />
+          </label>
+
+          <label className="flex flex-col gap-2">
+            <span className="flex items-baseline justify-between">
+              <Label tone="ink">{app.ticket.leverage}</Label>
+              <span className="label text-accent">{leverage}x</span>
+            </span>
+            <input
+              type="range"
+              min={1}
+              max={maxLeverage}
+              step={1}
+              value={leverage}
+              onChange={(event) => setLeverage(Number(event.target.value))}
+              aria-label={app.ticket.leverage}
+              className="h-1 w-full cursor-pointer appearance-none bg-rule-ink accent-accent"
+            />
+          </label>
+
+          <dl className="flex flex-col gap-2.5 font-mono text-xs">
+            {[
+              [
+                app.ticket.entry,
+                venue.live ? mark.toFixed(decimalPlaces) : app.ticket.entryValue,
+              ],
+              [app.ticket.notional, money(figures.notional)],
+              [app.ticket.liquidation, figures.liquidation.toFixed(decimalPlaces)],
+              [app.ticket.fee, fee(figures.fee)],
+              [
+                app.ticket.payout,
+                app.ticket.payoutValue(money(figures.payout)),
+              ],
+            ].map(([term, value]) => (
+              <div
+                key={term}
+                className="flex items-baseline justify-between gap-3 border-b border-dashed border-rule-ink/60 pb-2 last:border-b-0"
+              >
+                <dt className="text-dim-ink">{term}</dt>
+                <dd className="tabular-nums text-ink-on-ink">{value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <p className="text-xs leading-relaxed text-dim-ink">
+            {problem ?? app.ticket.note}
+          </p>
+
+          <Action
+            busy={busy}
+            side={side}
+            symbol={symbol}
+            address={address}
+            chainId={chainId}
+            free={snapshot?.free ?? 0}
+            posted={figures.posted}
+            onConnect={() => void ensureChain()}
+            onOpen={onOpen}
+          />
+        </div>
+      )}
+    </aside>
+  );
+};
+
+/**
+ * One button, walking a first trade through the reasons it cannot happen yet.
+ *
+ * Each state is a different sentence rather than one disabled button, because
+ * "connect a wallet", "you are on the wrong chain" and "you have no balance"
+ * are three different problems with three different fixes.
+ */
+const Action = ({
+  busy,
+  side,
+  symbol,
+  address,
+  chainId,
+  free,
+  posted,
+  onConnect,
+  onOpen,
+}: {
+  busy: boolean;
+  side: "long" | "short";
+  symbol: string | undefined;
+  address: string | null;
+  chainId: number | null;
+  free: number;
+  posted: number;
+  onConnect: () => void;
+  onOpen: () => void;
+}) => {
+  const dead =
+    "label mt-auto w-full cursor-not-allowed border border-rule-ink bg-surface-ink px-4 py-3.5 text-dim-ink";
+  const alive =
+    "label mt-auto w-full border border-accent bg-accent px-4 py-3.5 text-ink-on-ink transition-colors duration-[var(--duration-fast)] ease-entrance hover:bg-transparent hover:text-accent disabled:cursor-wait disabled:opacity-60";
+
+  if (!venue.live || !symbol) {
+    return (
+      <button type="button" disabled className={dead}>
+        {app.ticket.action}
+      </button>
+    );
+  }
+
+  if (!address) {
+    return (
+      <button type="button" disabled className={dead}>
+        {app.ticket.connect}
+      </button>
+    );
+  }
+
+  if (chainId !== venue.chainId) {
+    return (
+      <button type="button" onClick={onConnect} className={alive}>
+        {app.ticket.switchChain(brand.chain.name)}
+      </button>
+    );
+  }
+
+  if (free < posted || posted <= 0) {
+    return (
+      <button type="button" disabled className={dead}>
+        {app.ticket.fund}
+      </button>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onOpen} disabled={busy} className={alive}>
+      {busy ? app.ticket.working : app.ticket.open(side)}
+    </button>
+  );
+};
+
+/** The ticket, once there is a position on this pair to look at instead. */
+const PositionPanel = ({
+  held,
+  decimals,
+  busy,
+  problem,
+  onClose,
+}: {
+  held: {
+    isLong: boolean;
+    notional: number;
+    entryPrice: number;
+    mark: number;
+    pnl: number;
+    accruedFunding: number;
+    liquidationPrice: number;
+    liquidatable: boolean;
+  };
+  decimals: number;
+  busy: boolean;
+  problem: string | null;
+  onClose: () => void;
+}) => (
+  <div className="flex flex-1 flex-col gap-5 p-4">
+    <dl className="flex flex-col gap-2.5 font-mono text-xs">
+      {[
+        [
+          app.ticket.yours.side,
+          held.isLong ? app.ticket.long : app.ticket.short,
+          "text-ink-on-ink",
+        ],
+        [app.ticket.yours.size, money(held.notional), "text-ink-on-ink"],
+        [
+          app.ticket.yours.entry,
+          held.entryPrice.toFixed(decimals),
+          "text-ink-on-ink",
+        ],
+        [app.ticket.yours.mark, held.mark.toFixed(decimals), "text-ink-on-ink"],
+        [
+          app.ticket.yours.pnl,
+          signed(held.pnl),
+          held.pnl >= 0 ? "text-positive" : "text-negative",
+        ],
+        [
+          app.ticket.yours.funding,
+          signed(-held.accruedFunding),
+          held.accruedFunding <= 0 ? "text-positive" : "text-negative",
+        ],
+        [
+          app.ticket.yours.liquidation,
+          held.liquidationPrice.toFixed(decimals),
+          held.liquidatable ? "text-negative" : "text-dim-ink",
+        ],
+      ].map(([term, value, tone]) => (
+        <div
+          key={term}
+          className="flex items-baseline justify-between gap-3 border-b border-dashed border-rule-ink/60 pb-2 last:border-b-0"
+        >
+          <dt className="text-dim-ink">{term}</dt>
+          <dd className={`tabular-nums ${tone}`}>{value}</dd>
+        </div>
+      ))}
+    </dl>
+
+    <p className="text-xs leading-relaxed text-dim-ink">
+      {problem ?? app.ticket.note}
+    </p>
+
+    <button
+      type="button"
+      onClick={onClose}
+      disabled={busy}
+      className="label mt-auto w-full border border-rule-ink px-4 py-3.5 text-ink-on-ink transition-colors duration-[var(--duration-fast)] ease-entrance hover:border-accent hover:text-accent disabled:cursor-wait disabled:opacity-60"
+    >
+      {busy ? app.ticket.closing : app.ticket.close}
+    </button>
+  </div>
+);

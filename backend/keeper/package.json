@@ -1,0 +1,24 @@
+{
+  "name": "vevo-keeper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file=.env dist/index.js",
+    "dev": "tsc -p tsconfig.json --watch",
+    "resolve-feeds": "node --env-file=.env dist/resolve-feeds.js",
+    "once": "node --env-file=.env dist/index.js --once"
+  },
+  "dependencies": {
+    "ethers": "^6.13.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  }
+}

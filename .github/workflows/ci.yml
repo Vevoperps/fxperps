@@ -1,0 +1,109 @@
+name: CI
+
+# Three things have to hold on every push, and they are independent, so they
+# run as three jobs rather than one long one: a broken keeper build should not
+# hide a failing contract test.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: contracts
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/contracts
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      # `--sizes` fails the build if anything crosses the 24,576-byte limit,
+      # which is the one contract error that only shows up at deploy time.
+      - name: Build
+        run: forge build --sizes
+
+      # The suite is the handbook as assertions: fees, both liquidation
+      # distances, the funding cap, the payout cap, partial closes, and the
+      # solvency invariant.
+      - name: Test
+        run: forge test -vvv
+
+  app:
+    name: site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install
+        run: yarn install --frozen-lockfile
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Types
+        run: npx tsc --noEmit
+
+      # No venue configured here on purpose: this proves the preview state
+      # builds, which is what a fresh clone gets.
+      - name: Build
+        run: yarn build
+
+  keeper:
+    name: keeper
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/keeper
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+  generated:
+    name: generated files are current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The market table exists in three places — TypeScript, Solidity and
+      # JSON — and only the first is written by hand. If someone edits
+      # `src/lib/markets.ts` and forgets to regenerate, the chain and the app
+      # disagree about what USDTRY is allowed to do. This catches that.
+      - name: Regenerate the market table
+        run: node tools/gen-market-table.mjs
+        working-directory: backend
+
+      - name: Fail if it changed
+        run: |
+          if ! git diff --quiet; then
+            echo "::error::Generated files are stale. Run 'node tools/gen-market-table.mjs' from backend/ and commit the result."
+            git diff --stat
+            exit 1
+          fi

@@ -1,0 +1,12 @@
+out/
+cache/
+# forge-std is vendored rather than a submodule, so `git clone && forge test`
+# works with no extra step — for CI and for anyone reading the repository.
+# Anything else dropped into lib/ stays ignored.
+lib/*
+!lib/forge-std
+broadcast/
+.env
+.env.*
+!.env.example
+deployments/*.local.json
