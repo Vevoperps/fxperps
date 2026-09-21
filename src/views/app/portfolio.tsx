@@ -53,6 +53,9 @@ export const Portfolio = ({ compact = false }: { compact?: boolean }) => {
 
   const live = venue.live && address !== null;
   const idle = snapshot ? money(snapshot.free) : "0.00";
+  // What the faucet fills and a deposit spends. Read from the settlement
+  // token, not from the engine — see the note on `app.portfolio.transfers`.
+  const inWallet = snapshot ? money(snapshot.wallet) : "0.00";
 
   const unrealised = positions.reduce((total, one) => total + one.pnl, 0);
   const fundingOwed = positions.reduce(
@@ -146,7 +149,7 @@ export const Portfolio = ({ compact = false }: { compact?: boolean }) => {
 
       <div className="flex flex-col gap-3">
         <Label tone="ink">
-          {app.portfolio.transfers(brand.chain.settlement, idle)}
+          {app.portfolio.transfers(brand.chain.settlement, idle, inWallet)}
         </Label>
         <div className="flex flex-wrap items-center gap-2">
           <input
@@ -157,7 +160,11 @@ export const Portfolio = ({ compact = false }: { compact?: boolean }) => {
             onChange={(event) =>
               setAmount(event.target.value.replace(/[^0-9.]/g, ""))
             }
-            aria-label={app.portfolio.transfers(brand.chain.settlement, idle)}
+            aria-label={app.portfolio.transfers(
+              brand.chain.settlement,
+              idle,
+              inWallet,
+            )}
             className={`min-w-[10rem] flex-1 border border-rule-ink bg-surface-ink-2 px-4 py-3 font-mono text-sm tabular-nums placeholder:text-faint ${
               live
                 ? "text-ink-on-ink outline-none transition-colors duration-[var(--duration-fast)] ease-entrance focus:border-accent"

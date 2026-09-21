@@ -274,8 +274,16 @@ export const app = {
       staked: "In open stakes",
       idle: "Idle, withdrawable",
     },
-    transfers: (asset: string, idle: string) =>
-      `${asset} transfers. Idle balance ${idle}, withdrawable`,
+    /**
+     * Both balances, because they are two different places.
+     *
+     * The wallet balance is what the faucet fills and what a deposit spends;
+     * the idle balance is what the venue holds and what a trade draws on.
+     * Showing only the second made the faucet look like it had done nothing:
+     * tokens arrived, and every number on the page stayed at zero.
+     */
+    transfers: (asset: string, idle: string, wallet: string) =>
+      `${asset} transfers. Idle balance ${idle}, withdrawable · ${wallet} in wallet, depositable`,
     deposit: "Deposit",
     withdraw: "Withdraw",
     /** Local chains only: the mock settlement token's own faucet. */
