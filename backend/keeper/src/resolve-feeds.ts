@@ -45,6 +45,32 @@ interface HermesFeed {
 
 const TARGET = resolve(process.cwd(), "../contracts/script/feeds.json");
 
+/**
+ * The pair a feed prices, as `BASE/QUOTE`.
+ *
+ * Hermes does not carry a `base` attribute on its FX feeds — only `symbol`
+ * (`FX.USD/JPY`) and `quote_currency`. Reading `base` alone matched nothing at
+ * all, silently, and wrote an empty `feeds.json`: the failure looked exactly
+ * like "Pyth does not cover any of our pairs". The symbol is parsed first and
+ * the attributes are the fallback, not the other way round.
+ *
+ * `FX.Index.EUR/USD` and `FX.USDXY` are index products rather than a spot
+ * rate, and are skipped: they price something related to the pair, not the
+ * pair.
+ */
+const pairOf = (feed: HermesFeed): string | null => {
+  const symbol = feed.attributes?.symbol?.toUpperCase();
+
+  if (symbol?.startsWith("FX.") && !symbol.startsWith("FX.INDEX.")) {
+    const [base, quote] = symbol.slice("FX.".length).split("/");
+    if (base && quote) return `${base}/${quote}`;
+  }
+
+  const base = feed.attributes?.base?.toUpperCase();
+  const quote = feed.attributes?.quote_currency?.toUpperCase();
+  return base && quote ? `${base}/${quote}` : null;
+};
+
 const main = async (): Promise<void> => {
   const response = await fetch(`${config.HERMES_URL}/v2/price_feeds?asset_type=fx`);
   if (!response.ok) throw new Error(`hermes ${response.status} ${response.statusText}`);
@@ -55,10 +81,13 @@ const main = async (): Promise<void> => {
   // either direction".
   const index = new Map<string, string>();
   for (const feed of feeds) {
-    const base = feed.attributes?.base?.toUpperCase();
-    const quote = feed.attributes?.quote_currency?.toUpperCase();
-    if (!base || !quote) continue;
-    index.set(`${base}/${quote}`, feed.id.startsWith("0x") ? feed.id : `0x${feed.id}`);
+    const pair = pairOf(feed);
+    if (!pair) continue;
+    index.set(pair, feed.id.startsWith("0x") ? feed.id : `0x${feed.id}`);
+  }
+
+  if (index.size === 0) {
+    throw new Error("hermes returned no usable fx pairs — the response shape changed, do not trust an empty feeds.json");
   }
 
   const resolved: Record<string, {id: string; invert: boolean; source: string}> = {};
