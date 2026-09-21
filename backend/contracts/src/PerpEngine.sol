@@ -828,7 +828,13 @@ contract PerpEngine {
         // What was reserved for this slice: nine tenths of its payout cap, the
         // cap being ten times the margin posted at open. The margin may have
         // grown since, and the reservation deliberately did not.
-        uint256 reserve = (capOut / PositionMath.PAYOUT_CAP) * (PositionMath.PAYOUT_CAP - 1);
+        //
+        // Multiplied before divided. Dividing first leaves up to eight units of
+        // the settlement token reserved on every partial close, and reserved is
+        // the one balance nothing ever releases afterwards — it would sit on
+        // the pool's free liquidity forever. Rounding down is still deliberate:
+        // releasing more than was reserved is the failure that matters.
+        uint256 reserve = (capOut * (PositionMath.PAYOUT_CAP - 1)) / PositionMath.PAYOUT_CAP;
         poolReserved = poolReserved > reserve ? poolReserved - reserve : 0;
 
         if (paid > marginOut) {
