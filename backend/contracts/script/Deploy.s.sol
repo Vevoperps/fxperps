@@ -28,9 +28,10 @@ import {MarketTable} from "./MarketTable.sol";
  * Both fallbacks print a loud line. A venue that silently settled real money
  * against a price its own operator can set is not a venue.
  *
- * Usage (see backend/contracts/README.md for the full walk-through):
+ * Usage (see backend/contracts/README.md for the full walk-through). The
+ * deployer key is read from `.env`, never passed on the command line:
  *   forge script script/Deploy.s.sol:Deploy \
- *     --rpc-url $TESTNET_RPC_URL --private-key $DEPLOYER_KEY --broadcast
+ *     --rpc-url https://sepolia-rollup.arbitrum.io/rpc --broadcast
  */
 contract Deploy is Script {
     /**
@@ -53,7 +54,12 @@ contract Deploy is Script {
         address usdgAddress = _optionalAddress("USDG_ADDRESS");
         address pythAddress = _optionalAddress("PYTH_ADDRESS");
 
-        vm.startBroadcast();
+        // The key comes from `.env`, which forge loads itself, rather than from
+        // `--private-key` on the command line. A key typed into a shell is a
+        // key written to that shell's history file, and on Windows
+        // `--private-key $env:DEPLOYER_KEY` expands to nothing at all, because
+        // `.env` is forge's environment, not PowerShell's.
+        vm.startBroadcast(vm.envUint("DEPLOYER_KEY"));
 
         address deployer = msg.sender;
 

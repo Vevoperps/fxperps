@@ -24,9 +24,10 @@ import {MarketTable} from "./MarketTable.sol";
  * stays unpriced until a second source is wired in. An unpriced market has no
  * feed, so every call to it reverts, which is the correct failure.
  *
- * Usage:
+ * Usage. The deployer key is read from `.env`, never passed on the command
+ * line:
  *   forge script script/SetFeeds.s.sol:SetFeeds \
- *     --rpc-url $TESTNET_RPC_URL --private-key $DEPLOYER_KEY --broadcast
+ *     --rpc-url https://sepolia-rollup.arbitrum.io/rpc --broadcast
  */
 contract SetFeeds is Script {
     using stdJson for string;
@@ -41,7 +42,9 @@ contract SetFeeds is Script {
 
         MarketTable.Row[] memory table = MarketTable.rows();
 
-        vm.startBroadcast();
+        // From `.env`, for the same reason as the deploy script: a key on the
+        // command line is a key in the shell's history.
+        vm.startBroadcast(vm.envUint("DEPLOYER_KEY"));
 
         uint256 wired;
         for (uint256 i = 0; i < table.length; i++) {
