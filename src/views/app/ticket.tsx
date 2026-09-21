@@ -311,7 +311,8 @@ const Action = ({
   if (chainId !== venue.chainId) {
     return (
       <button type="button" onClick={onConnect} className={alive}>
-        {app.ticket.switchChain(brand.chain.name)}
+        {/* The chain we are deployed to, not the one the brand is named for. */}
+        {app.ticket.switchChain(venue.network.name)}
       </button>
     );
   }

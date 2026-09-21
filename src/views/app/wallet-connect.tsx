@@ -84,7 +84,7 @@ export const WalletConnect = () => {
           className="label flex items-center gap-2 border border-negative px-3 py-2.5 text-negative transition-colors duration-[var(--duration-fast)] ease-entrance hover:bg-negative hover:text-ink-on-ink"
         >
           <span aria-hidden className="size-2 bg-negative" />
-          {app.wallet.wrongChain(brand.chain.name)}
+          {app.wallet.wrongChain(venue.network.name)}
         </button>
       );
     }
@@ -189,10 +189,10 @@ export const WalletConnect = () => {
             {error === "refused"
               ? app.wallet.refused
               : error === "chain"
-                ? app.wallet.chainRefused(brand.chain.name)
+                ? app.wallet.chainRefused(venue.network.name)
                 : venue.live
-                  ? app.wallet.noteLive(brand.chain.name)
-                  : app.wallet.note(brand.chain.name)}
+                  ? app.wallet.noteLive(venue.network.name)
+                  : app.wallet.note(venue.network.name)}
           </p>
         </div>
       ) : null}
