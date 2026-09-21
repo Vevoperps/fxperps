@@ -171,7 +171,12 @@ export const addMargin = async (
  * offered only on a local chain rather than shown and then failing.
  */
 export const faucet = async (to: string, amount: bigint): Promise<void> => {
-  if (!venue.isLocal) throw new Error("the faucet is local-chain only");
+  // Test networks, not just local ones. The faucet is a function on the mock
+  // settlement token; where the token is real there is nothing to call, and a
+  // deployment against a real token has no business minting it.
+  if (!venue.network.testnet) {
+    throw new Error("the faucet exists only on a test network");
+  }
 
   const token = new Contract(
     venue.settlement as string,
@@ -223,5 +228,12 @@ export const explainRevert = (error: unknown): string => {
   if (/user rejected|ACTION_REJECTED/i.test(text)) return "you cancelled it";
   if (/insufficient funds/i.test(text)) return "not enough gas in the wallet";
 
-  return "the transaction did not go through";
+  // Nothing recognised it. Say so, and hand over what the chain actually
+  // said — an unexplained failure with the cause thrown away is the one
+  // outcome nobody can act on, neither the person hitting the button nor
+  // whoever they report it to.
+  const detail = (shape.shortMessage ?? shape.reason ?? shape.message ?? "").trim();
+  return detail
+    ? `the transaction did not go through — ${detail.slice(0, 160)}`
+    : "the transaction did not go through";
 };
