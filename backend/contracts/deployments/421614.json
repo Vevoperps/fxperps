@@ -1,0 +1,8 @@
+{
+  "chainId": 421614,
+  "deployedAt": 1790002518,
+  "engine": "0xDd039ed7105c72d0A7F6B568da748759eAb9806C",
+  "mockOracle": false,
+  "oracle": "0x69a1Eed662084E5C24c462D1ADA0e4663ec415F1",
+  "settlement": "0x27C9B25e143e114D0391667ea6A23aF8A1c624D7"
+}

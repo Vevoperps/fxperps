@@ -50,6 +50,22 @@ contract Deploy is Script {
         return bytes(raw).length == 0 ? address(0) : vm.parseAddress(raw);
     }
 
+    /**
+     * @dev The deployer key, with or without its `0x`.
+     *
+     * MetaMask exports a private key as 64 bare hex characters and `envUint`
+     * refuses anything without the prefix, so the first deploy of the day dies
+     * on a missing two characters. Accepting both spellings costs nothing and
+     * removes a step that has to be got right while holding a private key.
+     */
+    function _deployerKey() private view returns (uint256) {
+        string memory raw = vm.envString("DEPLOYER_KEY");
+        bytes memory value = bytes(raw);
+
+        bool prefixed = value.length > 1 && value[0] == "0" && (value[1] == "x" || value[1] == "X");
+        return vm.parseUint(prefixed ? raw : string.concat("0x", raw));
+    }
+
     function run() external {
         address usdgAddress = _optionalAddress("USDG_ADDRESS");
         address pythAddress = _optionalAddress("PYTH_ADDRESS");
@@ -59,9 +75,16 @@ contract Deploy is Script {
         // key written to that shell's history file, and on Windows
         // `--private-key $env:DEPLOYER_KEY` expands to nothing at all, because
         // `.env` is forge's environment, not PowerShell's.
-        vm.startBroadcast(vm.envUint("DEPLOYER_KEY"));
+        uint256 key = _deployerKey();
 
-        address deployer = msg.sender;
+        // Derived from the key, never read off `msg.sender`. Inside a broadcast
+        // `msg.sender` is the script's own default sender, not the account the
+        // transactions are signed by, and forge refuses the script outright
+        // when the two differ — which is the correct refusal: the owner of the
+        // venue would otherwise be an address nobody holds the key to.
+        address deployer = vm.addr(key);
+
+        vm.startBroadcast(key);
 
         if (usdgAddress == address(0)) {
             usdgAddress = address(new MockUSDG());

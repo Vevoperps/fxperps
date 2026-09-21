@@ -37,6 +37,10 @@ contract Seed is Script {
     /// @dev Anvil. Nothing else.
     uint256 private constant LOCAL_CHAIN = 31337;
 
+    /// @dev Anvil's own first account. Public, worthless, and printed on every
+    /// start — it exists nowhere but a local chain.
+    uint256 private constant ANVIL_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+
     /// @dev Settlement dollars put behind the book, and handed to the faucet.
     uint256 private constant LIQUIDITY = 5_000_000;
     uint256 private constant FAUCET = 100_000;
@@ -44,8 +48,12 @@ contract Seed is Script {
     function run() external {
         require(block.chainid == LOCAL_CHAIN, "Seed: local chain only");
 
-        vm.startBroadcast();
-        address deployer = msg.sender;
+        // The anvil key, derived rather than read off `msg.sender`: inside a
+        // broadcast that is the script's default sender, not the signer.
+        uint256 key = vm.envOr("DEPLOYER_KEY", ANVIL_KEY);
+        address deployer = vm.addr(key);
+
+        vm.startBroadcast(key);
 
         MockUSDG usdg = new MockUSDG();
         MockOracle oracle = new MockOracle(deployer);

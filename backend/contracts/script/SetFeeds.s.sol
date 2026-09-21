@@ -32,8 +32,33 @@ import {MarketTable} from "./MarketTable.sol";
 contract SetFeeds is Script {
     using stdJson for string;
 
+    /// @dev The deployer key from `.env`, with or without its `0x` prefix.
+    function _deployerKey() private view returns (uint256) {
+        string memory raw = vm.envString("DEPLOYER_KEY");
+        bytes memory value = bytes(raw);
+
+        bool prefixed = value.length > 1 && value[0] == "0" && (value[1] == "x" || value[1] == "X");
+        return vm.parseUint(prefixed ? raw : string.concat("0x", raw));
+    }
+
+    /**
+     * @dev The oracle to wire, from `.env` or from the deploy's own record.
+     *
+     * `Deploy.s.sol` writes `deployments/<chainId>.json` precisely so the
+     * address does not have to be copied by hand between two commands run
+     * minutes apart. `ORACLE_ADDRESS` still wins when it is set, for wiring an
+     * oracle this machine did not deploy.
+     */
+    function _oracleAddress() private view returns (address) {
+        string memory fromEnv = vm.envOr("ORACLE_ADDRESS", string(""));
+        if (bytes(fromEnv).length != 0) return vm.parseAddress(fromEnv);
+
+        string memory record = vm.readFile(string.concat("./deployments/", vm.toString(block.chainid), ".json"));
+        return record.readAddress(".oracle");
+    }
+
     function run() external {
-        address oracleAddress = vm.envAddress("ORACLE_ADDRESS");
+        address oracleAddress = _oracleAddress();
         uint32 maxAge = uint32(vm.envOr("ORACLE_MAX_AGE", uint256(60)));
         uint32 maxConfidenceBps = uint32(vm.envOr("ORACLE_MAX_CONFIDENCE_BPS", uint256(50)));
 
@@ -43,8 +68,9 @@ contract SetFeeds is Script {
         MarketTable.Row[] memory table = MarketTable.rows();
 
         // From `.env`, for the same reason as the deploy script: a key on the
-        // command line is a key in the shell's history.
-        vm.startBroadcast(vm.envUint("DEPLOYER_KEY"));
+        // command line is a key in the shell's history. `0x` optional, because
+        // that is how wallets export it.
+        vm.startBroadcast(_deployerKey());
 
         uint256 wired;
         for (uint256 i = 0; i < table.length; i++) {

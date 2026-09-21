@@ -17,6 +17,16 @@ bytecode_hash = "none"
 # confirmed to support Shanghai.
 evm_version = "paris"
 
+# Foundry denies scripts every filesystem access unless it is named here, and a
+# deploy that cannot write its own record dies *after* printing the addresses
+# and *before* broadcasting anything — the worst possible moment. Two paths and
+# no more: the deployment records the scripts write, and the feed table
+# `SetFeeds` reads.
+fs_permissions = [
+    {access = "read-write", path = "./deployments"},
+    {access = "read", path = "./script"},
+]
+
 [fmt]
 line_length = 120
 tab_width = 4
