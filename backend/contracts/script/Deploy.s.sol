@@ -33,9 +33,25 @@ import {MarketTable} from "./MarketTable.sol";
  *     --rpc-url $TESTNET_RPC_URL --private-key $DEPLOYER_KEY --broadcast
  */
 contract Deploy is Script {
+    /**
+     * @dev An address from the environment, where "absent" and "present but
+     * blank" mean the same thing.
+     *
+     * `vm.envOr(key, address(0))` only falls back when the variable is missing
+     * entirely. A `.env` carrying `USDG_ADDRESS=` — which is exactly what the
+     * example file hands you, and exactly what a testnet deploy wants — is
+     * present and unparsable, and the deploy dies on a parse error before it
+     * reaches the first line of the log. Reading it as a string and deciding
+     * here is the difference between a documented fallback and a trap.
+     */
+    function _optionalAddress(string memory key) private view returns (address) {
+        string memory raw = vm.envOr(key, string(""));
+        return bytes(raw).length == 0 ? address(0) : vm.parseAddress(raw);
+    }
+
     function run() external {
-        address usdgAddress = vm.envOr("USDG_ADDRESS", address(0));
-        address pythAddress = vm.envOr("PYTH_ADDRESS", address(0));
+        address usdgAddress = _optionalAddress("USDG_ADDRESS");
+        address pythAddress = _optionalAddress("PYTH_ADDRESS");
 
         vm.startBroadcast();
 
