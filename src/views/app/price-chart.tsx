@@ -100,10 +100,19 @@ export const PriceChart = ({ symbol }: { symbol: string }) => {
 
   return (
     <figure className="m-0">
-      <div
-        ref={host}
-        className="tradingview-widget-container h-[22rem] w-full sm:h-[28rem]"
-      />
+      {/*
+        The height lives on this wrapper, not on the container below.
+
+        The embed script rewrites its container's inline style to
+        `height: 100%`, and an inline rule beats a class — so a height set on
+        the container itself is replaced by a percentage of whatever is above
+        it. With nothing definite above, a hundred percent of unknown collapses
+        to the height of the contents: a sliver of candles between two
+        toolbars. Here the percentage has something real to resolve against.
+      */}
+      <div className="h-[22rem] w-full sm:h-[28rem]">
+        <div ref={host} className="tradingview-widget-container h-full w-full" />
+      </div>
 
       <figcaption className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-rule-ink px-4 py-2 font-mono text-[0.6875rem] tracking-wide text-dim-ink uppercase">
         <span>
