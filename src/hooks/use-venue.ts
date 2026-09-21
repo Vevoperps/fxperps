@@ -108,6 +108,53 @@ export const useVenueAccount = (): VenueAccount => {
   };
 };
 
+/** The pool, as the API serialises it: shares are a decimal string. */
+export interface PoolSnapshot {
+  assets: number;
+  reserved: number;
+  free: number;
+  utilisation: number;
+  shares: string;
+  value: number;
+  ownership: number;
+}
+
+/**
+ * The pool, polled.
+ *
+ * It reads with or without a connected wallet: the pool's size is public, and
+ * somebody deciding whether to back the book should see what they would be
+ * backing before they connect anything.
+ */
+export const useVenuePool = (): { pool: PoolSnapshot | null } => {
+  const address = useWallet((state) => state.address);
+  const version = useRefresh((state) => state.version);
+  const [pool, setPool] = useState<PoolSnapshot | null>(null);
+
+  useEffect(() => {
+    if (!venue.live) {
+      setPool(null);
+      return;
+    }
+
+    let alive = true;
+    const query = address ? `?address=${address}` : "";
+    const load = () =>
+      apiFetch<PoolSnapshot>(`/api/pool${query}`)
+        .then((found) => alive && setPool(found))
+        .catch(() => undefined);
+
+    load();
+    const timer = setInterval(load, POLL_MS);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [address, version]);
+
+  return { pool };
+};
+
 /**
  * The open position on one pair, if there is one.
  *

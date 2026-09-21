@@ -30,6 +30,9 @@ export interface ChainMarket {
   longOpenInterest: number;
   shortOpenInterest: number;
   maxLeverage: number;
+  /** The mark one window ago, and when it was taken. Zero when never. */
+  referencePrice: number;
+  referenceAt: number;
 }
 
 /** One open position, priced now. */
@@ -48,6 +51,23 @@ export interface ChainPosition {
   liquidationPrice: number;
   liquidatable: boolean;
   openedAt: number;
+}
+
+/** The pool that takes the other side of every trade. */
+export interface Pool {
+  /** Settlement tokens backing the book. */
+  assets: number;
+  /** The part already promised to open positions' payout caps. */
+  reserved: number;
+  /** What a provider could withdraw right now. */
+  free: number;
+  /** How much of the pool is working, 0 to 1. */
+  utilisation: number;
+  /** The connected account's shares, and what they are worth. */
+  shares: bigint;
+  value: number;
+  /** That account's share of the whole, 0 to 1. */
+  ownership: number;
 }
 
 export interface Account {
@@ -69,6 +89,8 @@ interface MarketRow {
   listed: boolean;
   paused: boolean;
   priced: boolean;
+  referencePrice: bigint;
+  referenceAt: bigint;
 }
 
 interface PositionRow {
@@ -96,7 +118,10 @@ interface ReadableEngine {
   positionsView(account: string, ids: string[]): Promise<PositionRow[]>;
   balanceOf(account: string): Promise<bigint>;
   poolAssets(): Promise<bigint>;
+  poolReserved(): Promise<bigint>;
   poolFree(): Promise<bigint>;
+  poolShares(): Promise<bigint>;
+  sharesOf(account: string): Promise<bigint>;
 }
 
 interface ReadableToken {
@@ -179,6 +204,8 @@ export const readChainMarkets = async (
     longOpenInterest: fromAmount(row.longOpenInterest, decimals),
     shortOpenInterest: fromAmount(row.shortOpenInterest, decimals),
     maxLeverage: Number(row.maxLeverage),
+    referencePrice: fromPrice(row.referencePrice),
+    referenceAt: Number(row.referenceAt),
   }));
 };
 
@@ -226,4 +253,209 @@ export const readAccount = async (address: string): Promise<Account> => {
     wallet: fromAmount(wallet, decimals),
     allowance,
   };
+};
+
+/**
+ * The pool, and one account's part of it.
+ *
+ * `address` is optional because the pool's own numbers are public and worth
+ * showing to somebody who has not connected anything yet — the size of the
+ * book they would be backing is the first thing a provider wants to know.
+ */
+export const readPool = async (address?: string): Promise<Pool> => {
+  const { decimals } = await settlementMeta();
+  const engine = readEngine();
+
+  const [assetsRaw, reservedRaw, totalShares, mine] = await Promise.all([
+    engine.poolAssets(),
+    engine.poolReserved(),
+    engine.poolShares(),
+    address ? engine.sharesOf(address) : Promise.resolve(0n),
+  ]);
+
+  const assets = fromAmount(assetsRaw, decimals);
+  const reserved = fromAmount(reservedRaw, decimals);
+
+  // Shares are 1e18 whatever the token is, so the ratio is taken on the raw
+  // integers and only the result becomes a number.
+  const ownership = totalShares === 0n ? 0 : Number((mine * 10n ** 18n) / totalShares) / 1e18;
+
+  return {
+    assets,
+    reserved,
+    free: Math.max(0, assets - reserved),
+    utilisation: assets === 0 ? 0 : Math.min(1, reserved / assets),
+    shares: mine,
+    value: assets * ownership,
+    ownership,
+  };
+};
+
+// ------------------------------------------------------------------ activity
+
+/** One thing this account did, as the chain recorded it. */
+export interface Activity {
+  kind: "closed" | "reduced" | "liquidated" | "deposit" | "withdraw";
+  /** The pair, for the three position kinds. */
+  symbol?: string;
+  /** Settlement tokens that moved: a payout, a transfer, a liquidation reward. */
+  amount: number;
+  pnl?: number;
+  fee?: number;
+  funding?: number;
+  price?: number;
+  block: number;
+  at?: number;
+  hash: string;
+}
+
+interface LogRow {
+  args: Record<string, unknown> & { [index: number]: unknown };
+  blockNumber: number;
+  transactionHash: string;
+}
+
+interface LoggingEngine {
+  queryFilter(filter: unknown, from: number, to: number): Promise<LogRow[]>;
+  filters: {
+    PositionClosed(account?: string): unknown;
+    PositionReduced(account?: string): unknown;
+    PositionLiquidated(account?: string): unknown;
+    Deposited(account?: string): unknown;
+    Withdrawn(account?: string): unknown;
+  };
+}
+
+/** The engine names markets by hash, so the way back is a table we already have. */
+const symbolByHash = (symbols: string[]): Map<string, string> =>
+  new Map(symbols.map((symbol) => [marketId(symbol), symbol]));
+
+/**
+ * What one account has done, newest first.
+ *
+ * Read from the contract's own events rather than from a database, because the
+ * events are the record and anything else would be a second copy of it that
+ * can disagree. A node that refuses the block range gives back an empty list
+ * rather than an error: an empty history tab is a much smaller lie than a
+ * broken screen.
+ */
+export const readActivity = async (
+  address: string,
+  symbols: string[],
+  limit = 40,
+): Promise<Activity[]> => {
+  const { decimals } = await settlementMeta();
+  const engine = readEngine() as unknown as LoggingEngine;
+  const names = symbolByHash(symbols);
+
+  let head: number;
+  try {
+    head = await reader().getBlockNumber();
+  } catch {
+    return [];
+  }
+
+  const from = venue.deployBlock;
+
+  const pull = async (filter: unknown): Promise<LogRow[]> => {
+    try {
+      return await engine.queryFilter(filter, from, head);
+    } catch {
+      return [];
+    }
+  };
+
+  const [closed, reduced, liquidated, deposits, withdrawals] = await Promise.all([
+    pull(engine.filters.PositionClosed(address)),
+    pull(engine.filters.PositionReduced(address)),
+    pull(engine.filters.PositionLiquidated(address)),
+    pull(engine.filters.Deposited(address)),
+    pull(engine.filters.Withdrawn(address)),
+  ]);
+
+  const amount = (value: unknown): number =>
+    fromAmount(BigInt(value as string | bigint), decimals);
+
+  const rows: Activity[] = [];
+
+  for (const log of closed) {
+    rows.push({
+      kind: "closed",
+      symbol: names.get(String(log.args[1])),
+      price: fromPrice(BigInt(log.args.exitPrice as bigint)),
+      amount: amount(log.args.payout),
+      pnl: amount(log.args.pnl),
+      funding: amount(log.args.funding),
+      fee: amount(log.args.fee),
+      block: log.blockNumber,
+      hash: log.transactionHash,
+    });
+  }
+
+  for (const log of reduced) {
+    rows.push({
+      kind: "reduced",
+      symbol: names.get(String(log.args[1])),
+      price: fromPrice(BigInt(log.args.exitPrice as bigint)),
+      amount: amount(log.args.payout),
+      pnl: amount(log.args.pnl),
+      funding: amount(log.args.funding),
+      fee: amount(log.args.fee),
+      block: log.blockNumber,
+      hash: log.transactionHash,
+    });
+  }
+
+  for (const log of liquidated) {
+    rows.push({
+      kind: "liquidated",
+      symbol: names.get(String(log.args[1])),
+      price: fromPrice(BigInt(log.args.exitPrice as bigint)),
+      amount: 0,
+      block: log.blockNumber,
+      hash: log.transactionHash,
+    });
+  }
+
+  for (const log of deposits) {
+    rows.push({
+      kind: "deposit",
+      amount: amount(log.args.amount),
+      block: log.blockNumber,
+      hash: log.transactionHash,
+    });
+  }
+
+  for (const log of withdrawals) {
+    rows.push({
+      kind: "withdraw",
+      amount: amount(log.args.amount),
+      block: log.blockNumber,
+      hash: log.transactionHash,
+    });
+  }
+
+  rows.sort((a, b) => b.block - a.block);
+  const recent = rows.slice(0, limit);
+
+  // Timestamps, for the blocks that survived the cut only — a block lookup per
+  // event would be dozens of round trips to date a list nobody scrolls.
+  const blocks = [...new Set(recent.map((row) => row.block))];
+  const times = new Map<number, number>();
+
+  await Promise.all(
+    blocks.map(async (block) => {
+      try {
+        const found = await reader().getBlock(block);
+        if (found) times.set(block, Number(found.timestamp));
+      } catch {
+        // A pruned or unavailable block just goes undated.
+      }
+    }),
+  );
+
+  return recent.map((row) => {
+    const at = times.get(row.block);
+    return at === undefined ? row : { ...row, at };
+  });
 };

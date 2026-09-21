@@ -18,7 +18,8 @@ backend/
       mocks/                  MockUSDG, MockOracle — testnet only
     test/PerpEngine.t.sol     the handbook, as assertions
     script/                   Deploy, SetFeeds, generated MarketTable
-  keeper/           Node 22 + TypeScript. Posts prices, liquidates.
+  keeper/           Node 22 + TypeScript. Posts prices, liquidates, keeps
+                    each market's 24h reference mark fresh.
   shared/           Generated: markets.json and the ABIs. One source of truth.
   tools/            The generators that write shared/ and MarketTable.sol.
 ```
@@ -41,9 +42,14 @@ boundary in that path would be a transfer that can half-succeed.
 no pause traps a withdrawal, and closing works on a paused market. The owner
 lists markets and sets their parameters. That is the whole of the admin key.
 
-**Maintenance is permissionless.** `poke` and `liquidate` are open to anyone,
-and a liquidator is paid out of what is left of the position. Our keeper is a
-convenience, not a dependency.
+**Maintenance is permissionless.** `poke`, `snapshot` and `liquidate` are open
+to anyone, and a liquidator is paid out of what is left of the position. Our
+keeper is a convenience, not a dependency.
+
+**The 24h column comes off the chain, not an indexer.** Each market keeps one
+reference mark that anybody may refresh once a day, and `referenceAt` travels
+with it — so a front end can tell a fresh reference from a stale one and show a
+dash rather than a change measured against last week.
 
 ### The arithmetic, in one place
 
@@ -226,10 +232,15 @@ plus two balances. That keeps the RPC off the public origin, works against
 nodes that refuse cross-origin requests, and means one server-side call
 instead of one per open tab. Only signing goes through the wallet.
 
-Two things the chain genuinely cannot answer yet, and the app says so rather
-than inventing them: the **24h column** (the engine stores a mark, not a
-history — it shows a dash until there is an indexer) and **closed-position
-history** (the events exist; nothing reads them yet).
+Four screens: the board, a pair's terminal, the **pool** and the portfolio. The
+pool screen is not optional — the engine is peer-to-pool, so until somebody
+provides liquidity `openPosition` reverts on its first reservation and nothing
+trades.
+
+History and transfers are read from the contract's own events rather than a
+database, because the events are the record and a second copy of it can
+disagree. They need `NEXT_PUBLIC_DEPLOY_BLOCK` set, or a public node will
+refuse the range and both tabs come back empty.
 
 Deployed the same way as before:
 

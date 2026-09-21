@@ -23,6 +23,7 @@ const schema = z.object({
 
   PRICE_INTERVAL: seconds.default(15),
   LIQUIDATION_INTERVAL: seconds.default(20),
+  SNAPSHOT_INTERVAL: seconds.default(1200),
   START_BLOCK: z.coerce.number().int().nonnegative().default(0),
 
   HERMES_URL: z.string().url().default("https://hermes.pyth.network"),

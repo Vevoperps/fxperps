@@ -1,0 +1,290 @@
+"use client";
+
+import { useState } from "react";
+
+import { Label } from "@/components/ui/label";
+import { TypeIn } from "@/components/ui/type-in";
+import { app } from "@/data/app";
+import { useVenueAccount, useVenuePool } from "@/hooks/use-venue";
+import { brand } from "@/lib/brand";
+import {
+  addLiquidity,
+  explainRevert,
+  removeLiquidity,
+} from "@/lib/chain/engine";
+import { money, toAmount } from "@/lib/chain/units";
+import { venue } from "@/lib/chain/venue";
+import { useWallet } from "@/lib/chain/wallet";
+import { PreviewBanner } from "@/views/app/app-shell";
+
+/**
+ * The pool: the other side of every trade, and how to own part of it.
+ *
+ * Without this screen the venue cannot work at all. The engine is a
+ * peer-to-pool design — a trade fills against liquidity rather than against
+ * another trader — so until somebody puts settlement tokens in, `openPosition`
+ * reverts on the first reservation and nothing trades.
+ *
+ * **Reserved is the number that matters.** Every open position has its payout
+ * cap reserved out of the pool and a provider cannot withdraw that part until
+ * the position closes. That is exactly what makes the cap on the trader's
+ * ticket worth something, so it is shown at the same size as the pool's own
+ * total rather than hidden in a footnote.
+ */
+
+/** Shares carry 18 decimals whatever the settlement token does. */
+const SHARE_DECIMALS = 18;
+
+export const AppPool = () => {
+  const [provide, setProvide] = useState("");
+  const [redeem, setRedeem] = useState("");
+  const [busy, setBusy] = useState<"provide" | "redeem" | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const address = useWallet((state) => state.address);
+  const { snapshot, decimals, reload } = useVenueAccount();
+  const { pool } = useVenuePool();
+
+  const live = venue.live && address !== null;
+  const wallet = snapshot ? money(snapshot.wallet) : "0.00";
+
+  const run = (
+    kind: "provide" | "redeem",
+    action: () => Promise<void>,
+  ): void => {
+    void (async () => {
+      setBusy(kind);
+      setProblem(null);
+      try {
+        await action();
+        setProvide("");
+        setRedeem("");
+        reload();
+      } catch (error) {
+        setProblem(explainRevert(error));
+      } finally {
+        setBusy(null);
+      }
+    })();
+  };
+
+  const stats: [string, string][] = [
+    [app.pool.stats.size, money(pool?.assets ?? 0)],
+    [app.pool.stats.reserved, money(pool?.reserved ?? 0)],
+    [app.pool.stats.free, money(pool?.free ?? 0)],
+    [
+      app.pool.stats.utilisation,
+      `${((pool?.utilisation ?? 0) * 100).toFixed(1)}%`,
+    ],
+  ];
+
+  return (
+    <>
+      <PreviewBanner />
+
+      <section className="mx-auto flex w-full max-w-[90rem] flex-col gap-8 px-5 py-10 sm:px-8">
+        <div className="flex flex-col gap-3">
+          <span className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className="label bg-accent px-2 py-1.5 pt-2 text-ink-on-ink"
+            >
+              01
+            </span>
+            <Label tone="ink">{app.pool.title}</Label>
+          </span>
+
+          <h1 className="text-[1.75rem] font-medium leading-[1.1] tracking-tight sm:text-[2.25rem]">
+            <TypeIn block text={app.pool.heading[0]} delay={120} />
+            <TypeIn
+              block
+              text={app.pool.heading[1]}
+              delay={120 + app.pool.heading[0].length * 17}
+              className="text-dim-ink"
+            />
+          </h1>
+
+          <p className="max-w-[60ch] text-sm leading-relaxed text-dim-ink">
+            {app.pool.lede}
+          </p>
+        </div>
+
+        {/* The pool itself. Reserved sits beside the total because the two
+            only mean anything together. */}
+        <div className="grid gap-px border border-rule-ink bg-rule-ink sm:grid-cols-2 lg:grid-cols-4">
+          {stats.map(([term, value]) => (
+            <div
+              key={term}
+              className="flex flex-col gap-1.5 bg-surface-ink p-5"
+            >
+              <Label tone="ink">{term}</Label>
+              <b className="font-mono text-[1.75rem] font-medium leading-none tabular-nums">
+                {value}
+              </b>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid gap-px border border-rule-ink bg-rule-ink lg:grid-cols-[1fr_1fr]">
+          {/* What this account holds. */}
+          <div className="flex flex-col gap-5 bg-surface-ink p-5">
+            <Label tone="ink">{app.pool.yours}</Label>
+
+            <dl className="flex flex-col gap-2.5 font-mono text-xs">
+              {[
+                [app.pool.yourValue, money(pool?.value ?? 0)],
+                [
+                  app.pool.yourShare,
+                  `${((pool?.ownership ?? 0) * 100).toFixed(2)}%`,
+                ],
+              ].map(([term, value]) => (
+                <div
+                  key={term}
+                  className="flex items-baseline justify-between gap-3 border-b border-dashed border-rule-ink/60 pb-2 last:border-b-0"
+                >
+                  <dt className="text-dim-ink">{term}</dt>
+                  <dd className="tabular-nums text-ink-on-ink">{value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            <div className="flex flex-col gap-3">
+              <Label tone="ink">
+                {app.pool.addLabel(brand.chain.settlement, wallet)}
+              </Label>
+              <Row
+                value={provide}
+                onChange={setProvide}
+                live={live}
+                busy={busy !== null}
+                action={app.pool.add}
+                working={busy === "provide"}
+                onSubmit={() =>
+                  run("provide", () =>
+                    addLiquidity(toAmount(provide, decimals)),
+                  )
+                }
+              />
+
+              <Label tone="ink">
+                {app.pool.removeLabel(money(pool?.value ?? 0))}
+              </Label>
+              <Row
+                value={redeem}
+                onChange={setRedeem}
+                live={live}
+                busy={busy !== null}
+                action={app.pool.remove}
+                working={busy === "redeem"}
+                // Shares, not tokens: the engine redeems a share count and
+                // prices it at the moment the transaction lands.
+                onSubmit={() =>
+                  run("redeem", () =>
+                    removeLiquidity(toAmount(redeem, SHARE_DECIMALS)),
+                  )
+                }
+                max={pool ? () => setRedeem(shareText(pool.shares)) : undefined}
+              />
+
+              {problem ? (
+                <p className="font-mono text-xs text-negative">{problem}</p>
+              ) : null}
+
+              {live ? null : (
+                <p className="label text-faint">{app.pool.empty}</p>
+              )}
+            </div>
+          </div>
+
+          {/* What a provider is taking on. */}
+          <div className="flex flex-col gap-4 bg-surface-ink p-5">
+            <Label tone="ink">Risk</Label>
+            <dl className="flex flex-col gap-4">
+              {app.pool.risk.map((item) => (
+                <div key={item.term} className="flex flex-col gap-1">
+                  <dt className="text-sm text-ink-on-ink">{item.term}</dt>
+                  <dd className="max-w-[46ch] text-xs leading-relaxed text-dim-ink">
+                    {item.body}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+};
+
+/** Shares as a readable decimal, without dragging a formatter into the view. */
+const shareText = (shares: string): string => {
+  const raw = BigInt(shares);
+  const whole = raw / 10n ** BigInt(SHARE_DECIMALS);
+  const fraction = (raw % 10n ** BigInt(SHARE_DECIMALS))
+    .toString()
+    .padStart(SHARE_DECIMALS, "0")
+    .slice(0, 6)
+    .replace(/0+$/, "");
+
+  return fraction ? `${whole}.${fraction}` : `${whole}`;
+};
+
+/** One amount field and the button that sends it. */
+const Row = ({
+  value,
+  onChange,
+  live,
+  busy,
+  action,
+  working,
+  onSubmit,
+  max,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  live: boolean;
+  busy: boolean;
+  action: string;
+  working: boolean;
+  onSubmit: () => void;
+  max?: (() => void) | undefined;
+}) => (
+  <div className="flex flex-wrap items-center gap-2">
+    <input
+      inputMode="decimal"
+      placeholder="0.00"
+      value={value}
+      disabled={!live}
+      onChange={(event) => onChange(event.target.value.replace(/[^0-9.]/g, ""))}
+      aria-label={action}
+      className={`min-w-[8rem] flex-1 border border-rule-ink bg-surface-ink-2 px-4 py-3 font-mono text-sm tabular-nums placeholder:text-faint ${
+        live
+          ? "text-ink-on-ink outline-none transition-colors duration-[var(--duration-fast)] ease-entrance focus:border-accent"
+          : "cursor-not-allowed text-dim-ink"
+      }`}
+    />
+
+    {live && max ? (
+      <button
+        type="button"
+        onClick={max}
+        className="label border border-rule-ink px-3 py-3 text-dim-ink transition-colors duration-[var(--duration-fast)] ease-entrance hover:text-accent"
+      >
+        {app.pool.max}
+      </button>
+    ) : null}
+
+    <button
+      type="button"
+      disabled={!live || busy || value === ""}
+      onClick={onSubmit}
+      className={
+        live
+          ? "label border border-accent px-4 py-3 text-accent transition-colors duration-[var(--duration-fast)] ease-entrance hover:bg-accent hover:text-ink-on-ink disabled:cursor-not-allowed disabled:opacity-50"
+          : "label cursor-not-allowed border border-rule-ink px-4 py-3 text-dim-ink"
+      }
+    >
+      {working ? app.ticket.working : action}
+    </button>
+  </div>
+);

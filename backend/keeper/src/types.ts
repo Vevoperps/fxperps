@@ -27,6 +27,10 @@ export interface EngineContract {
     staticCall(account: string, market: string): Promise<bigint>;
   };
   poke(market: string): Promise<ContractTransactionResponse>;
+  snapshot: {
+    (market: string): Promise<ContractTransactionResponse>;
+    staticCall(market: string): Promise<boolean>;
+  };
   queryFilter(filter: DeferredTopicFilter, from: number, to: number): Promise<Array<EventLog | Log>>;
   filters: {
     PositionOpened(): DeferredTopicFilter;

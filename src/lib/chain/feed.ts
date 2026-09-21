@@ -23,22 +23,54 @@ export interface Feed {
 }
 
 /**
- * A note on the 24h column.
+ * How far a reference mark may have drifted and still be called "24h".
  *
- * The engine stores a mark, not a history, so a chain read genuinely does not
- * know yesterday's price. Rather than print a made-up number, the row is
- * flagged `changeKnown: false` and the table shows a dash. A real 24h column
- * needs an indexer over the oracle's own history; that is a separate piece of
- * work, not something to invent here.
+ * The engine stores one reference price per market, refreshed by anyone once a
+ * day. A keeper that is late makes it older than a day, and at some point
+ * "24h" stops being an honest label for it — so past this the row is flagged
+ * unknown and the table shows a dash instead of a number measured against last
+ * week.
  */
+const REFERENCE_MAX_AGE = 36 * 60 * 60;
+const REFERENCE_MIN_AGE = 60 * 60;
+
+/** The 24h move, when the reference behind it is fresh enough to say so. */
+const changeFrom = (
+  mark: number,
+  reference: number,
+  takenAt: number,
+  now: number,
+): { change24h: number; changeKnown: boolean } => {
+  const age = now - takenAt;
+
+  if (
+    reference <= 0 ||
+    takenAt === 0 ||
+    age > REFERENCE_MAX_AGE ||
+    age < REFERENCE_MIN_AGE
+  ) {
+    return { change24h: 0, changeKnown: false };
+  }
+
+  return { change24h: (mark - reference) / reference, changeKnown: true };
+};
+
 export const readFeed = async (): Promise<Feed> => {
   if (!venue.live) return { markets: readMarks(), onchain: false };
 
   try {
     const rows = await readChainMarkets(PAIRS.map((pair) => pair.symbol));
 
+    const now = Math.floor(Date.now() / 1000);
+
     const markets = rows.map((row, index) => {
       const pair = PAIRS[index] as (typeof PAIRS)[number];
+      const moved = changeFrom(
+        row.mark,
+        row.referencePrice,
+        row.referenceAt,
+        now,
+      );
 
       return {
         id: pair.symbol.toLowerCase(),
@@ -47,8 +79,7 @@ export const readFeed = async (): Promise<Feed> => {
         flag: pair.flag,
         type: "fx" as const,
         mark: row.priced ? row.mark : pair.base,
-        change24h: 0,
-        changeKnown: false,
+        ...(row.priced ? moved : { change24h: 0, changeKnown: false }),
         fundingRate: row.fundingRate,
         maxLeverage: row.maxLeverage || pair.maxLeverage,
         status: !row.listed

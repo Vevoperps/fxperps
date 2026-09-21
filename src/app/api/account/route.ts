@@ -4,7 +4,9 @@ import { z } from "zod";
 import { ApiError, handle } from "@/lib/api";
 import {
   readAccount,
+  readActivity,
   readChainPositions,
+  type Activity,
   type ChainPosition,
 } from "@/lib/chain/read";
 import { venue } from "@/lib/chain/venue";
@@ -33,6 +35,8 @@ export interface AccountSnapshot {
   /** Whether the engine may already pull settlement tokens for this account. */
   approved: boolean;
   positions: ChainPosition[];
+  /** What this account has done, newest first, from the contract's events. */
+  activity: Activity[];
 }
 
 export const GET = handle(async (request: NextRequest) => {
@@ -45,6 +49,11 @@ export const GET = handle(async (request: NextRequest) => {
   });
 
   const symbols = PAIRS.map((pair) => pair.symbol);
+
+  // The activity read is deliberately outside the guard below: a node that
+  // refuses a wide `eth_getLogs` range is common and must not take the
+  // balances down with it.
+  const history = readActivity(address, symbols).catch((): Activity[] => []);
 
   const [account, positions] = await Promise.all([
     readAccount(address),
@@ -64,6 +73,7 @@ export const GET = handle(async (request: NextRequest) => {
     wallet: account.wallet,
     approved: account.allowance > 0n,
     positions,
+    activity: await history,
   };
 
   return NextResponse.json(

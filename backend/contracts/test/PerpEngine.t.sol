@@ -212,6 +212,32 @@ contract PerpEngineTest is Test {
         vm.stopPrank();
     }
 
+    // ------------------------------------------------- the 24h reference mark
+
+    function test_TheReferenceMovesOncePerWindow() public {
+        // Nothing has been recorded yet, so the app has nothing to compare to.
+        bytes32[] memory ids = new bytes32[](1);
+        ids[0] = USDJPY;
+        assertEq(engine.marketsView(ids)[0].referenceAt, 0, "no reference yet");
+
+        assertTrue(engine.snapshot(USDJPY), "first call records one");
+
+        PerpEngine.MarketView memory taken = engine.marketsView(ids)[0];
+        assertEq(taken.referencePrice, 156.8e18, "the mark at the time");
+        assertEq(taken.referenceAt, uint64(block.timestamp));
+
+        // A second caller minutes later must not be able to move it.
+        vm.prank(owner);
+        oracle.setPrice(USDJPY, 200e18);
+        assertFalse(engine.snapshot(USDJPY), "refused inside the window");
+        assertEq(engine.marketsView(ids)[0].referencePrice, 156.8e18, "unmoved");
+
+        // A day later it refreshes.
+        vm.warp(block.timestamp + 24 hours);
+        assertTrue(engine.snapshot(USDJPY), "the window is up");
+        assertEq(engine.marketsView(ids)[0].referencePrice, 200e18, "refreshed");
+    }
+
     // ------------------------------------------------------------ liquidation
 
     function test_LiquidationPaysTheCallerOutOfWhatIsLeft() public {

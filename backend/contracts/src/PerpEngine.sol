@@ -68,6 +68,18 @@ contract PerpEngine {
         int256 fundingLong;
         int256 fundingShort;
         uint64 lastAccrual;
+        /**
+         * @dev The mark one reference window ago, and when it was taken.
+         *
+         * The engine stores a price, not a history, so a "24h change" has to
+         * come from somewhere. Rather than an indexer and a database, one
+         * number per market is snapshotted once a window by whoever calls
+         * `snapshot` — and `referenceAt` travels with it, so a front end can
+         * tell a fresh reference from a stale one instead of printing a change
+         * against a price from last week.
+         */
+        uint256 referencePrice;
+        uint64 referenceAt;
         bool listed;
         /// @dev Paused markets refuse new positions. Closing always works.
         bool paused;
@@ -110,6 +122,9 @@ contract PerpEngine {
         bool paused;
         /// @dev False when the oracle cannot price it right now.
         bool priced;
+        /// @dev The mark one window ago, and when it was taken. Zero if never.
+        uint256 referencePrice;
+        uint64 referenceAt;
     }
 
     /// @notice Everything a front end needs for one open position, in one call.
@@ -131,6 +146,8 @@ contract PerpEngine {
     uint256 private constant LIQUIDATOR_SHARE_BPS = 5_000;
     /// @notice Shares minted for the first unit of liquidity, to price the pool.
     uint256 private constant INITIAL_SHARES = 1e18;
+    /// @notice How often a market's reference mark may be refreshed.
+    uint256 private constant REFERENCE_WINDOW = 24 hours;
 
     // -------------------------------------------------------------- storage
 
@@ -200,6 +217,7 @@ contract PerpEngine {
     event PositionLiquidated(
         address indexed account, bytes32 indexed market, address indexed liquidator, uint256 exitPrice, uint256 reward
     );
+    event ReferenceTaken(bytes32 indexed market, uint256 price, uint64 at);
     event OracleChanged(address oracle);
     event OwnershipTransferred(address indexed from, address indexed to);
 
@@ -476,6 +494,31 @@ contract PerpEngine {
         _accrue(market, state);
     }
 
+    /**
+     * @notice Record the current mark as this market's reference price.
+     *
+     * This is what makes a 24h change possible without an indexer. Anyone may
+     * call it and it does nothing until a window has passed, so a keeper can
+     * run it on a loop and a stranger cannot move the reference around.
+     *
+     * It reverts if the oracle cannot price the market, because a reference
+     * taken from a stale feed is worse than no reference at all.
+     *
+     * @return taken True when a new reference was recorded.
+     */
+    function snapshot(bytes32 market) external returns (bool taken) {
+        Market storage state = _market(market);
+        if (block.timestamp < uint256(state.referenceAt) + REFERENCE_WINDOW) {
+            return false;
+        }
+
+        state.referencePrice = oracle.price(market);
+        state.referenceAt = uint64(block.timestamp);
+
+        emit ReferenceTaken(market, state.referencePrice, state.referenceAt);
+        return true;
+    }
+
     // ----------------------------------------------------------------- views
 
     function marketCount() external view returns (uint256) {
@@ -511,6 +554,8 @@ contract PerpEngine {
             out[i].listed = state.listed;
             out[i].paused = state.paused;
             out[i].fundingRate = Funding.rate(state.longOpenInterest, state.shortOpenInterest, state.skewScale);
+            out[i].referencePrice = state.referencePrice;
+            out[i].referenceAt = state.referenceAt;
 
             if (!state.listed) continue;
 

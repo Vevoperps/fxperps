@@ -34,6 +34,7 @@ export const app = {
   nav: [
     { href: "/app", label: "Home", ready: true },
     { href: "/app/pairs", label: "All pairs", ready: true },
+    { href: "/app/pool", label: "Pool", ready: true },
     { href: "/app/portfolio", label: "Portfolio", ready: true },
   ],
 
@@ -191,6 +192,17 @@ export const app = {
     closing: "Closing…",
     openPosition: "Open position",
     unpriced: "no price for this pair yet",
+
+    /** Managing a position that is already open. */
+    manage: {
+      marginLabel: (asset: string, idle: string) =>
+        `Add margin, ${asset} · idle ${idle}`,
+      add: "Add",
+      reduceLabel: (notional: string) => `Close part, notional of ${notional}`,
+      reduce: "Close",
+      half: "Half",
+      note: "adding margin moves the liquidation price and nothing else. the payout cap was fixed when the position opened.",
+    },
     yours: {
       side: "side",
       size: "notional",
@@ -200,6 +212,48 @@ export const app = {
       funding: "funding",
       liquidation: "liquidation",
     },
+  },
+
+  pool: {
+    title: "Pool",
+    heading: ["Back the book,", "own a share of it"],
+    lede: `the venue is the counterparty to every trade, and this is what it trades with. providers put ${brand.chain.settlement} in and take shares out; the shares are worth whatever the pool is worth when they are redeemed.`,
+    stats: {
+      size: "Pool size",
+      reserved: "Reserved",
+      free: "Free to withdraw",
+      utilisation: "Utilisation",
+    },
+    yours: "Your position",
+    yourValue: "Value",
+    yourShare: "Share of pool",
+    shares: "Shares",
+    add: "Provide",
+    remove: "Redeem",
+    addLabel: (asset: string, wallet: string) =>
+      `Provide ${asset} · wallet ${wallet}`,
+    removeLabel: (value: string) => `Redeem, up to ${value}`,
+    max: "Max",
+    /**
+     * What a provider is actually taking on. Plain, because somebody about to
+     * be the counterparty to sixty-four currency pairs should read it once and
+     * understand it.
+     */
+    risk: [
+      {
+        term: "You are the other side",
+        body: "the pool wins when traders lose and loses when they win. fees and the funding the book's skew pays go to it either way.",
+      },
+      {
+        term: "Reserved is not yours to withdraw",
+        body: "every open position has its payout cap reserved out of the pool. that part is locked until the position closes, which is what makes the cap worth anything.",
+      },
+      {
+        term: "No lock, no schedule",
+        body: "redeem any time, up to what is free. there is no epoch, no queue and no notice period.",
+      },
+    ],
+    empty: "Connect a wallet to provide liquidity.",
   },
 
   portfolio: {
@@ -229,6 +283,22 @@ export const app = {
       liquidation: "Liquidation",
     },
     tabs: ["Positions", "Orders", "History", "Transfers"],
+    /** How each recorded event reads in the list. */
+    activity: {
+      closed: "Closed",
+      reduced: "Closed part",
+      liquidated: "Liquidated",
+      deposit: "Deposit",
+      withdraw: "Withdrawal",
+      columns: {
+        event: "Event",
+        pair: "Pair",
+        price: "Price",
+        amount: "Amount",
+        pnl: "Result",
+        when: "When",
+      },
+    },
     empty: {
       Positions: "0 open positions.",
       Orders:

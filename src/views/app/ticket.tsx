@@ -7,9 +7,11 @@ import { app } from "@/data/app";
 import { usePosition, useVenueAccount } from "@/hooks/use-venue";
 import { brand } from "@/lib/brand";
 import {
+  addMargin,
   closePosition,
   explainRevert,
   openPosition,
+  reducePosition,
 } from "@/lib/chain/engine";
 import { money, signed, toAmount } from "@/lib/chain/units";
 import { venue } from "@/lib/chain/venue";
@@ -130,6 +132,18 @@ export const Ticket = ({
       await closePosition(symbol);
     });
 
+  const onAddMargin = (amount: string) =>
+    void run(async () => {
+      if (!symbol) return;
+      await addMargin(symbol, toAmount(amount, decimals));
+    });
+
+  const onReduce = (notional: string) =>
+    void run(async () => {
+      if (!symbol) return;
+      await reducePosition(symbol, toAmount(notional, decimals));
+    });
+
   return (
     <aside className="flex h-full flex-col border border-rule-ink bg-surface-ink-2/40">
       <div className="grid grid-cols-2 gap-px bg-rule-ink">
@@ -155,9 +169,12 @@ export const Ticket = ({
         <PositionPanel
           held={held}
           decimals={decimalPlaces}
+          idle={idle}
           busy={busy}
           problem={problem}
           onClose={onClose}
+          onAddMargin={onAddMargin}
+          onReduce={onReduce}
         />
       ) : (
         <div className="flex flex-1 flex-col gap-5 p-4">
@@ -196,10 +213,15 @@ export const Ticket = ({
             {[
               [
                 app.ticket.entry,
-                venue.live ? mark.toFixed(decimalPlaces) : app.ticket.entryValue,
+                venue.live
+                  ? mark.toFixed(decimalPlaces)
+                  : app.ticket.entryValue,
               ],
               [app.ticket.notional, money(figures.notional)],
-              [app.ticket.liquidation, figures.liquidation.toFixed(decimalPlaces)],
+              [
+                app.ticket.liquidation,
+                figures.liquidation.toFixed(decimalPlaces),
+              ],
               [app.ticket.fee, fee(figures.fee)],
               [
                 app.ticket.payout,
@@ -313,9 +335,12 @@ const Action = ({
 const PositionPanel = ({
   held,
   decimals,
+  idle,
   busy,
   problem,
   onClose,
+  onAddMargin,
+  onReduce,
 }: {
   held: {
     isLong: boolean;
@@ -328,62 +353,158 @@ const PositionPanel = ({
     liquidatable: boolean;
   };
   decimals: number;
+  idle: string;
   busy: boolean;
   problem: string | null;
   onClose: () => void;
-}) => (
-  <div className="flex flex-1 flex-col gap-5 p-4">
-    <dl className="flex flex-col gap-2.5 font-mono text-xs">
-      {[
-        [
-          app.ticket.yours.side,
-          held.isLong ? app.ticket.long : app.ticket.short,
-          "text-ink-on-ink",
-        ],
-        [app.ticket.yours.size, money(held.notional), "text-ink-on-ink"],
-        [
-          app.ticket.yours.entry,
-          held.entryPrice.toFixed(decimals),
-          "text-ink-on-ink",
-        ],
-        [app.ticket.yours.mark, held.mark.toFixed(decimals), "text-ink-on-ink"],
-        [
-          app.ticket.yours.pnl,
-          signed(held.pnl),
-          held.pnl >= 0 ? "text-positive" : "text-negative",
-        ],
-        [
-          app.ticket.yours.funding,
-          signed(-held.accruedFunding),
-          held.accruedFunding <= 0 ? "text-positive" : "text-negative",
-        ],
-        [
-          app.ticket.yours.liquidation,
-          held.liquidationPrice.toFixed(decimals),
-          held.liquidatable ? "text-negative" : "text-dim-ink",
-        ],
-      ].map(([term, value, tone]) => (
-        <div
-          key={term}
-          className="flex items-baseline justify-between gap-3 border-b border-dashed border-rule-ink/60 pb-2 last:border-b-0"
-        >
-          <dt className="text-dim-ink">{term}</dt>
-          <dd className={`tabular-nums ${tone}`}>{value}</dd>
-        </div>
-      ))}
-    </dl>
+  onAddMargin: (amount: string) => void;
+  onReduce: (notional: string) => void;
+}) => {
+  const [topUp, setTopUp] = useState("");
+  const [trim, setTrim] = useState("");
 
-    <p className="text-xs leading-relaxed text-dim-ink">
-      {problem ?? app.ticket.note}
-    </p>
+  return (
+    <div className="flex flex-1 flex-col gap-5 p-4">
+      <dl className="flex flex-col gap-2.5 font-mono text-xs">
+        {[
+          [
+            app.ticket.yours.side,
+            held.isLong ? app.ticket.long : app.ticket.short,
+            "text-ink-on-ink",
+          ],
+          [app.ticket.yours.size, money(held.notional), "text-ink-on-ink"],
+          [
+            app.ticket.yours.entry,
+            held.entryPrice.toFixed(decimals),
+            "text-ink-on-ink",
+          ],
+          [
+            app.ticket.yours.mark,
+            held.mark.toFixed(decimals),
+            "text-ink-on-ink",
+          ],
+          [
+            app.ticket.yours.pnl,
+            signed(held.pnl),
+            held.pnl >= 0 ? "text-positive" : "text-negative",
+          ],
+          [
+            app.ticket.yours.funding,
+            signed(-held.accruedFunding),
+            held.accruedFunding <= 0 ? "text-positive" : "text-negative",
+          ],
+          [
+            app.ticket.yours.liquidation,
+            held.liquidationPrice.toFixed(decimals),
+            held.liquidatable ? "text-negative" : "text-dim-ink",
+          ],
+        ].map(([term, value, tone]) => (
+          <div
+            key={term}
+            className="flex items-baseline justify-between gap-3 border-b border-dashed border-rule-ink/60 pb-2 last:border-b-0"
+          >
+            <dt className="text-dim-ink">{term}</dt>
+            <dd className={`tabular-nums ${tone}`}>{value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {/* Two things a position needs that closing it does not do: more room
+        before liquidation, and a way out of part of it. The contract has
+        supported both from the start. */}
+      <div className="flex flex-col gap-3">
+        <Label tone="ink">
+          {app.ticket.manage.marginLabel(brand.chain.settlement, idle)}
+        </Label>
+        <Manage
+          value={topUp}
+          onChange={setTopUp}
+          busy={busy}
+          action={app.ticket.manage.add}
+          onSubmit={() => {
+            onAddMargin(topUp);
+            setTopUp("");
+          }}
+        />
+
+        <Label tone="ink">
+          {app.ticket.manage.reduceLabel(money(held.notional))}
+        </Label>
+        <Manage
+          value={trim}
+          onChange={setTrim}
+          busy={busy}
+          action={app.ticket.manage.reduce}
+          shortcut={{
+            label: app.ticket.manage.half,
+            onPick: () => setTrim((held.notional / 2).toFixed(2)),
+          }}
+          onSubmit={() => {
+            onReduce(trim);
+            setTrim("");
+          }}
+        />
+      </div>
+
+      <p className="text-xs leading-relaxed text-dim-ink">
+        {problem ?? app.ticket.manage.note}
+      </p>
+
+      <button
+        type="button"
+        onClick={onClose}
+        disabled={busy}
+        className="label mt-auto w-full border border-rule-ink px-4 py-3.5 text-ink-on-ink transition-colors duration-[var(--duration-fast)] ease-entrance hover:border-accent hover:text-accent disabled:cursor-wait disabled:opacity-60"
+      >
+        {busy ? app.ticket.closing : app.ticket.close}
+      </button>
+    </div>
+  );
+};
+
+/** One small amount field, for the two controls a live position needs. */
+const Manage = ({
+  value,
+  onChange,
+  busy,
+  action,
+  onSubmit,
+  shortcut,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  busy: boolean;
+  action: string;
+  onSubmit: () => void;
+  shortcut?: { label: string; onPick: () => void };
+}) => (
+  <div className="flex items-center gap-2">
+    <input
+      inputMode="decimal"
+      placeholder="0.00"
+      value={value}
+      onChange={(event) => onChange(event.target.value.replace(/[^0-9.]/g, ""))}
+      aria-label={action}
+      className="min-w-0 flex-1 border border-rule-ink bg-surface-ink px-3 py-2.5 font-mono text-xs tabular-nums text-ink-on-ink outline-none transition-colors duration-[var(--duration-fast)] ease-entrance placeholder:text-faint focus:border-accent"
+    />
+
+    {shortcut ? (
+      <button
+        type="button"
+        onClick={shortcut.onPick}
+        className="label border border-rule-ink px-2.5 py-2.5 text-dim-ink transition-colors duration-[var(--duration-fast)] ease-entrance hover:text-accent"
+      >
+        {shortcut.label}
+      </button>
+    ) : null}
 
     <button
       type="button"
-      onClick={onClose}
-      disabled={busy}
-      className="label mt-auto w-full border border-rule-ink px-4 py-3.5 text-ink-on-ink transition-colors duration-[var(--duration-fast)] ease-entrance hover:border-accent hover:text-accent disabled:cursor-wait disabled:opacity-60"
+      disabled={busy || value === ""}
+      onClick={onSubmit}
+      className="label border border-accent px-3 py-2.5 text-accent transition-colors duration-[var(--duration-fast)] ease-entrance hover:bg-accent hover:text-ink-on-ink disabled:cursor-not-allowed disabled:opacity-40"
     >
-      {busy ? app.ticket.closing : app.ticket.close}
+      {action}
     </button>
   </div>
 );

@@ -7,13 +7,9 @@ import { Label } from "@/components/ui/label";
 import { TypeIn } from "@/components/ui/type-in";
 import { app } from "@/data/app";
 import { useVenueAccount } from "@/hooks/use-venue";
+import type { Activity } from "@/lib/chain/read";
 import { brand } from "@/lib/brand";
-import {
-  deposit,
-  explainRevert,
-  faucet,
-  withdraw,
-} from "@/lib/chain/engine";
+import { deposit, explainRevert, faucet, withdraw } from "@/lib/chain/engine";
 import { money, signed, toAmount } from "@/lib/chain/units";
 import { venue } from "@/lib/chain/venue";
 import { useWallet } from "@/lib/chain/wallet";
@@ -44,6 +40,16 @@ export const Portfolio = ({ compact = false }: { compact?: boolean }) => {
   const address = useWallet((state) => state.address);
   const { snapshot, decimals, reload } = useVenueAccount();
   const positions = snapshot?.positions ?? [];
+  const activity = snapshot?.activity ?? [];
+
+  // The two tabs split the same event list: what happened to positions, and
+  // what moved in or out of the balance.
+  const history = activity.filter(
+    (one) => one.kind !== "deposit" && one.kind !== "withdraw",
+  );
+  const transfers = activity.filter(
+    (one) => one.kind === "deposit" || one.kind === "withdraw",
+  );
 
   const live = venue.live && address !== null;
   const idle = snapshot ? money(snapshot.free) : "0.00";
@@ -77,8 +83,8 @@ export const Portfolio = ({ compact = false }: { compact?: boolean }) => {
   const counts: Record<string, number> = {
     Positions: positions.length,
     Orders: 0,
-    History: 0,
-    Transfers: 0,
+    History: history.length,
+    Transfers: transfers.length,
   };
 
   return (
@@ -233,6 +239,10 @@ export const Portfolio = ({ compact = false }: { compact?: boolean }) => {
 
         {tab === "Positions" && positions.length > 0 ? (
           <PositionTable rows={positions} />
+        ) : tab === "History" && history.length > 0 ? (
+          <ActivityTable rows={history} />
+        ) : tab === "Transfers" && transfers.length > 0 ? (
+          <ActivityTable rows={transfers} />
         ) : (
           <p className="px-5 py-6 font-mono text-xs text-dim-ink">
             {app.portfolio.empty[tab]}
@@ -325,3 +335,87 @@ const PositionTable = ({
     </table>
   </div>
 );
+
+/**
+ * What this account has done, straight from the contract's events.
+ *
+ * One table serves both the history and the transfers tab, because the two are
+ * the same list filtered differently and a second component would be a second
+ * place for the formatting to drift.
+ */
+const ActivityTable = ({ rows }: { rows: Activity[] }) => (
+  <div className="overflow-x-auto">
+    <table className="w-full min-w-[44rem] border-collapse font-mono text-xs">
+      <thead>
+        <tr className="border-b border-rule-ink text-left">
+          {Object.values(app.portfolio.activity.columns).map((column) => (
+            <th key={column} className="px-4 py-3 font-normal text-dim-ink">
+              <Label tone="ink">{column}</Label>
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr
+            key={`${row.hash}-${row.kind}-${row.symbol ?? ""}`}
+            className="border-b border-rule-ink/60 last:border-b-0"
+          >
+            <td className="px-4 py-3 text-ink-on-ink">
+              {app.portfolio.activity[row.kind]}
+            </td>
+            <td className="px-4 py-3 text-dim-ink">
+              {row.symbol ? (
+                <Link
+                  href={`/app/market/${row.symbol.toLowerCase()}`}
+                  className="transition-colors duration-[var(--duration-fast)] ease-entrance hover:text-accent"
+                >
+                  {row.symbol}
+                </Link>
+              ) : (
+                "—"
+              )}
+            </td>
+            <td className="px-4 py-3 tabular-nums text-dim-ink">
+              {row.price === undefined
+                ? "—"
+                : row.price.toFixed(decimalsFor(row.price || 1))}
+            </td>
+            <td className="px-4 py-3 tabular-nums text-ink-on-ink">
+              {money(row.amount)}
+            </td>
+            <td
+              className={`px-4 py-3 tabular-nums ${
+                row.pnl === undefined
+                  ? "text-dim-ink"
+                  : row.pnl >= 0
+                    ? "text-positive"
+                    : "text-negative"
+              }`}
+            >
+              {row.pnl === undefined ? "—" : signed(row.pnl)}
+            </td>
+            <td className="px-4 py-3 text-dim-ink">{when(row)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+/**
+ * When it happened, in the plainest form that is true.
+ *
+ * A block without a timestamp is dated by its number rather than guessed at —
+ * a wrong time on a trade record is worse than an honest block height.
+ */
+const when = (row: Activity): string => {
+  if (row.at === undefined) return `#${row.block}`;
+
+  return new Date(row.at * 1000).toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};

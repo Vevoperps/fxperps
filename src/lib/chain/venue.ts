@@ -24,6 +24,7 @@ const engine = read(process.env.NEXT_PUBLIC_ENGINE_ADDRESS);
 const settlement = read(process.env.NEXT_PUBLIC_SETTLEMENT_ADDRESS);
 const rpcUrl = read(process.env.NEXT_PUBLIC_RPC_URL);
 const chainId = Number(read(process.env.NEXT_PUBLIC_CHAIN_ID) ?? brand.chain.id);
+const deployBlock = Number(read(process.env.NEXT_PUBLIC_DEPLOY_BLOCK) ?? 0);
 
 /** A deployed address is 20 bytes of hex and nothing else. */
 const isAddress = (value: string | null): value is string =>
@@ -43,6 +44,15 @@ export const venue = {
   settlement: isAddress(settlement) ? settlement : null,
   rpcUrl,
   chainId,
+
+  /**
+   * The block the engine was deployed at.
+   *
+   * Log queries start here. Left at zero a public node will usually refuse the
+   * range, and the activity list simply comes back empty rather than breaking
+   * anything — so it is worth setting, and not worth blocking on.
+   */
+  deployBlock: Number.isFinite(deployBlock) ? deployBlock : 0,
 
   /** What a wallet needs to add the chain if it does not know it. */
   chain: {

@@ -22,6 +22,8 @@ import { getSigner } from "./wallet";
 
 interface WritableEngine {
   deposit(amount: bigint): Promise<ContractTransactionResponse>;
+  addLiquidity(amount: bigint): Promise<ContractTransactionResponse>;
+  removeLiquidity(shares: bigint): Promise<ContractTransactionResponse>;
   withdraw(amount: bigint): Promise<ContractTransactionResponse>;
   openPosition(
     market: string,
@@ -96,6 +98,25 @@ export const approveIfNeeded = async (amount: bigint): Promise<void> => {
 export const deposit = async (amount: bigint): Promise<void> => {
   await approveIfNeeded(amount);
   const transaction = await (await writeEngine()).deposit(amount);
+  await transaction.wait();
+};
+
+/**
+ * Back the venue's side of the book.
+ *
+ * Same approval as a deposit — the engine holds one token and pulls it the
+ * same way — but the money goes into the pool rather than into a balance, and
+ * what comes back is shares of it.
+ */
+export const addLiquidity = async (amount: bigint): Promise<void> => {
+  await approveIfNeeded(amount);
+  const transaction = await (await writeEngine()).addLiquidity(amount);
+  await transaction.wait();
+};
+
+/** Redeem shares. Only the part of the pool no open position has reserved. */
+export const removeLiquidity = async (shares: bigint): Promise<void> => {
+  const transaction = await (await writeEngine()).removeLiquidity(shares);
   await transaction.wait();
 };
 

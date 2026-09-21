@@ -533,6 +533,31 @@
     "inputs": [
       {
         "indexed": true,
+        "internalType": "bytes32",
+        "name": "market",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "price",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint64",
+        "name": "at",
+        "type": "uint64"
+      }
+    ],
+    "name": "ReferenceTaken",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
         "internalType": "address",
         "name": "account",
         "type": "address"
@@ -851,6 +876,16 @@
         "type": "uint64"
       },
       {
+        "internalType": "uint256",
+        "name": "referencePrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint64",
+        "name": "referenceAt",
+        "type": "uint64"
+      },
+      {
         "internalType": "bool",
         "name": "listed",
         "type": "bool"
@@ -920,6 +955,16 @@
             "internalType": "bool",
             "name": "priced",
             "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "referencePrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint64",
+            "name": "referenceAt",
+            "type": "uint64"
           }
         ],
         "internalType": "struct PerpEngine.MarketView[]",
@@ -1428,6 +1473,25 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "market",
+        "type": "bytes32"
+      }
+    ],
+    "name": "snapshot",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "taken",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
