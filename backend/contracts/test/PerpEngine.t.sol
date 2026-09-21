@@ -43,6 +43,12 @@ contract PerpEngineTest is Test {
     address private keeper = makeAddr("keeper");
 
     function setUp() public {
+        // A chain's clock is not 1. Funding accrues by the second and the 24h
+        // reference is a window away from a real timestamp, so the suite runs
+        // at one rather than at the epoch, where an off-by-a-window bug looks
+        // like correct behaviour.
+        vm.warp(1_760_000_000);
+
         usdg = new MockUSDG();
         oracle = new MockOracle(owner);
         engine = new PerpEngine(IERC20(address(usdg)), IOracle(address(oracle)), owner);

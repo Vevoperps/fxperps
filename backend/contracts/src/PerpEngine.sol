@@ -504,11 +504,16 @@ contract PerpEngine {
      * It reverts if the oracle cannot price the market, because a reference
      * taken from a stale feed is worse than no reference at all.
      *
+     * A market that has never been referenced is taken immediately. `0` is not
+     * a timestamp, it is the absence of one, and reading it as a timestamp
+     * would make the first reference wait a window from the epoch rather than
+     * from the listing.
+     *
      * @return taken True when a new reference was recorded.
      */
     function snapshot(bytes32 market) external returns (bool taken) {
         Market storage state = _market(market);
-        if (block.timestamp < uint256(state.referenceAt) + REFERENCE_WINDOW) {
+        if (state.referenceAt != 0 && block.timestamp < uint256(state.referenceAt) + REFERENCE_WINDOW) {
             return false;
         }
 
