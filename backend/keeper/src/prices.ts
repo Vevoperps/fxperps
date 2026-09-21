@@ -1,9 +1,11 @@
 import {Contract} from "ethers";
 
 import {explain, marketId, provider, signer} from "./chain.js";
-import {config, usingMockOracle} from "./config.js";
+import {hermes} from "./hermes.js";
+import {config, oracleKind, usingMockOracle} from "./config.js";
+import {fetchMarks, quoteAge} from "./fx.js";
 import {abi, markets} from "./shared.js";
-import type {MockOracleContract, PythContract, PythOracleContract} from "./types.js";
+import type {MockOracleContract, PushOracleContract, PythContract, PythOracleContract} from "./types.js";
 
 /**
  * Keeps the chain's idea of every rate current.
@@ -82,8 +84,7 @@ const readWiring = async (): Promise<Wired[]> => {
 
 const fetchUpdates = async (feedIds: string[]): Promise<HermesUpdate> => {
   const query = feedIds.map((feed) => `ids[]=${feed}`).join("&");
-  const response = await fetch(`${config.HERMES_URL}/v2/updates/price/latest?${query}&parsed=true`);
-  if (!response.ok) throw new Error(`hermes ${response.status} ${response.statusText}`);
+  const response = await hermes(`/v2/updates/price/latest?${query}&parsed=true`);
   return (await response.json()) as HermesUpdate;
 };
 
@@ -96,6 +97,14 @@ const toWad = (raw: string, expo: number, invert: boolean): bigint => {
 };
 
 export const pushPrices = async (): Promise<void> => {
+  // The push path does not read a feed table at all: every listed market is
+  // priced directly from the rate source, including the thirty-five Pyth does
+  // not publish.
+  if (oracleKind === "push") {
+    await postMarks();
+    return;
+  }
+
   const feeds = await readWiring();
 
   if (usingMockOracle) {
@@ -117,6 +126,37 @@ export const pushPrices = async (): Promise<void> => {
   const receipt = await transaction.wait();
 
   console.log(`[prices] ${feeds.length} feeds posted, fee ${fee}, block ${receipt?.blockNumber ?? "?"}`);
+};
+
+/**
+ * The push path: conventional FX rates posted to a `PushOracle`.
+ *
+ * Posted in one transaction for all sixty-four, because a venue whose marks
+ * were written a minute apart is a venue whose cross rates disagree with each
+ * other.
+ */
+const postMarks = async (): Promise<void> => {
+  const marks = await fetchMarks();
+  if (marks.length === 0) {
+    console.warn("[prices] the fx source returned nothing usable — nothing posted");
+    return;
+  }
+
+  const oracle = new Contract(
+    config.ORACLE_ADDRESS,
+    abi.pushOracle as never,
+    signer,
+  ) as unknown as PushOracleContract;
+
+  const ids = marks.map((mark) => marketId(mark.symbol));
+  const values = marks.map((mark) => mark.value);
+
+  const transaction = await oracle.postMarks(ids, values);
+  const receipt = await transaction.wait();
+
+  console.log(
+    `[prices] PUSH oracle: ${marks.length} marks posted, quote ${quoteAge()}s old, block ${receipt?.blockNumber ?? "?"}`,
+  );
 };
 
 /** The testnet path: parsed prices written straight into the mock oracle. */

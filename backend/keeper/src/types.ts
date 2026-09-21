@@ -28,7 +28,7 @@ export interface EngineContract {
   };
   poke(market: string): Promise<ContractTransactionResponse>;
   snapshot: {
-    (market: string): Promise<ContractTransactionResponse>;
+    (market: string, overrides?: {nonce: number}): Promise<ContractTransactionResponse>;
     staticCall(market: string): Promise<boolean>;
   };
   queryFilter(filter: DeferredTopicFilter, from: number, to: number): Promise<Array<EventLog | Log>>;
@@ -48,6 +48,11 @@ export interface PythOracleContract {
 
 export interface MockOracleContract {
   setPrices(markets: string[], values: bigint[]): Promise<ContractTransactionResponse>;
+}
+
+export interface PushOracleContract {
+  postMarks(markets: string[], values: bigint[]): Promise<ContractTransactionResponse>;
+  markAt(market: string): Promise<[bigint, bigint]>;
 }
 
 export interface PythContract {

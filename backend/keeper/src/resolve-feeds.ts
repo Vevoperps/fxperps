@@ -1,7 +1,7 @@
 import {writeFileSync} from "node:fs";
 import {resolve} from "node:path";
 
-import {config} from "./config.js";
+import {hermes} from "./hermes.js";
 import {markets} from "./shared.js";
 
 /**
@@ -72,8 +72,7 @@ const pairOf = (feed: HermesFeed): string | null => {
 };
 
 const main = async (): Promise<void> => {
-  const response = await fetch(`${config.HERMES_URL}/v2/price_feeds?asset_type=fx`);
-  if (!response.ok) throw new Error(`hermes ${response.status} ${response.statusText}`);
+  const response = await hermes("/v2/price_feeds?asset_type=fx");
 
   const feeds = (await response.json()) as HermesFeed[];
 

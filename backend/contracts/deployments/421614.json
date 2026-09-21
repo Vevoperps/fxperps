@@ -1,8 +1,9 @@
 {
   "chainId": 421614,
-  "deployedAt": 1790002518,
+  "deployedAt": 1790005741,
   "engine": "0xDd039ed7105c72d0A7F6B568da748759eAb9806C",
-  "mockOracle": false,
-  "oracle": "0x69a1Eed662084E5C24c462D1ADA0e4663ec415F1",
+  "oracle": "0x9c2F146c35ED7C3248D764Ca59Ea8ADD05a1E73E",
+  "oracleKind": "push",
+  "publisher": "0x354Bfdce4877fEC2fa5b5eE1619aba2F3E6076eE",
   "settlement": "0x27C9B25e143e114D0391667ea6A23aF8A1c624D7"
 }

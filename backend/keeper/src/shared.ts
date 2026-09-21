@@ -42,4 +42,5 @@ export const abi = {
   engine: read<unknown[]>("abi/PerpEngine.json"),
   pythOracle: read<unknown[]>("abi/PythOracle.json"),
   mockOracle: read<unknown[]>("abi/MockOracle.json"),
+  pushOracle: read<unknown[]>("abi/PushOracle.json"),
 };

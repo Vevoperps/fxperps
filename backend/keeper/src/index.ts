@@ -1,5 +1,5 @@
 import {every, provider, signer} from "./chain.js";
-import {config, usingMockOracle} from "./config.js";
+import {config, oracleKind, operatorSetMarks} from "./config.js";
 import {sweep} from "./liquidator.js";
 import {pushPrices} from "./prices.js";
 import {takeSnapshots} from "./snapshots.js";
@@ -28,13 +28,20 @@ const main = async (): Promise<void> => {
   console.log("vevo keeper");
   console.log(`  chain      ${network.chainId} (${config.CHAIN_ID} configured)`);
   console.log(`  engine     ${config.ENGINE_ADDRESS}`);
-  console.log(`  oracle     ${config.ORACLE_ADDRESS}${usingMockOracle ? "  !! MOCK, testnet only" : ""}`);
+  console.log(`  oracle     ${config.ORACLE_ADDRESS}  (${oracleKind})`);
   console.log(`  keeper     ${signer.address}`);
   console.log(`  gas        ${balance}`);
   console.log(`  markets    ${markets.length}`);
 
   if (network.chainId !== BigInt(config.CHAIN_ID)) {
     throw new Error(`RPC is chain ${network.chainId}, expected ${config.CHAIN_ID} — check RPC_URL`);
+  }
+
+  // Said on every start, not buried in a README. On these paths the address
+  // below decides what every position is worth, and a venue whose operator
+  // forgets that is a venue that finds out from its users.
+  if (operatorSetMarks) {
+    console.warn("  !! this keeper SETS the mark. it is not verified on chain. testnet arrangement.");
   }
 
   if (balance === 0n) {

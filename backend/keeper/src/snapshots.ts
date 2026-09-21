@@ -1,4 +1,4 @@
-import {engine, explain, marketId} from "./chain.js";
+import {engine, explain, marketId, provider, signer} from "./chain.js";
 import {markets} from "./shared.js";
 
 /**
@@ -20,8 +20,19 @@ import {markets} from "./shared.js";
  */
 
 export const takeSnapshots = async (): Promise<void> => {
-  let taken = 0;
-  let skipped = 0;
+  const pending: Array<{symbol: string; wait: () => Promise<unknown>}> = [];
+
+  let notDue = 0;
+  let unpriced = 0;
+
+  // The nonce is counted here rather than asked for per transaction.
+  //
+  // ethers reads the account's pending count before each send, and a node
+  // answering that question while thirty transactions are still in flight
+  // answers with a number it has not caught up to — so two of them leave with
+  // the same nonce and the second is rejected. Reading it once and counting up
+  // is the whole fix. A send that fails does not consume one.
+  let nonce = await provider.getTransactionCount(signer.address, "pending");
 
   for (const market of markets) {
     const id = marketId(market.symbol);
@@ -31,26 +42,46 @@ export const takeSnapshots = async (): Promise<void> => {
       // and the oracle can price this market right now.
       const due = await engine.snapshot.staticCall(id);
       if (!due) {
-        skipped += 1;
+        notDue += 1;
         continue;
       }
     } catch {
-      // An unwired or stale feed reverts here. That is the correct failure and
-      // not worth a log line every round.
-      skipped += 1;
+      // An unwired or stale feed reverts here — a different thing entirely
+      // from a window that has not come round, and counted separately because
+      // confusing the two hides an oracle that has stopped.
+      unpriced += 1;
       continue;
     }
 
     try {
-      const transaction = await engine.snapshot(id);
-      await transaction.wait();
-      taken += 1;
+      // Sent, not awaited to completion. The first run of a fresh deployment
+      // has sixty-four references to take, and waiting for each receipt in
+      // turn took longer than the oracle's own staleness window — the marks
+      // went stale halfway through the loop and the rest of the round failed
+      // on a price it had just posted. Sending first and collecting the
+      // receipts afterwards turns minutes into seconds.
+      const transaction = await engine.snapshot(id, {nonce});
+      nonce += 1;
+      pending.push({symbol: market.symbol, wait: () => transaction.wait()});
     } catch (error) {
       console.error(`[ref] ${market.symbol}: ${explain(error)}`);
     }
   }
 
-  if (taken > 0) {
-    console.log(`[ref] ${taken} references refreshed, ${skipped} not due`);
+  let taken = 0;
+
+  for (const one of pending) {
+    try {
+      await one.wait();
+      taken += 1;
+    } catch (error) {
+      console.error(`[ref] ${one.symbol}: ${explain(error)}`);
+    }
+  }
+
+  if (taken > 0 || unpriced > 0) {
+    const parts = [`${taken} refreshed`, `${notDue} not due`];
+    if (unpriced > 0) parts.push(`${unpriced} unpriced or stale`);
+    console.log(`[ref] ${parts.join(", ")}`);
   }
 };

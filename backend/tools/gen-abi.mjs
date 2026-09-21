@@ -19,7 +19,7 @@ const OUT = path.resolve(HERE, "../contracts/out");
 const TARGET = path.resolve(HERE, "../shared/abi");
 const SITE = path.resolve(HERE, "../../src/lib/chain/abi.ts");
 
-const WANTED = ["PerpEngine", "PythOracle", "MockOracle", "MockUSDG"];
+const WANTED = ["PerpEngine", "PythOracle", "PushOracle", "MockOracle", "MockUSDG"];
 
 if (!fs.existsSync(OUT)) {
   console.error("no contracts/out — run `forge build` in backend/contracts first");
