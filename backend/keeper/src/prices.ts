@@ -4,6 +4,7 @@ import {explain, marketId, provider, signer} from "./chain.js";
 import {hermes} from "./hermes.js";
 import {config, oracleKind, usingMockOracle} from "./config.js";
 import {fetchMarks, quoteAge} from "./fx.js";
+import type {Mark} from "./fx.js";
 import {abi, markets} from "./shared.js";
 import type {MockOracleContract, PushOracleContract, PythContract, PythOracleContract} from "./types.js";
 
@@ -135,6 +136,95 @@ export const pushPrices = async (): Promise<void> => {
  * were written a minute apart is a venue whose cross rates disagree with each
  * other.
  */
+const BPS = 10_000n;
+
+let pushOracle: PushOracleContract | null = null;
+let staleness: number | null = null;
+
+const push = (): PushOracleContract => {
+  pushOracle ??= new Contract(
+    config.ORACLE_ADDRESS,
+    abi.pushOracle as never,
+    signer,
+  ) as unknown as PushOracleContract;
+  return pushOracle;
+};
+
+/** The oracle's own staleness window, asked once. */
+const maxAge = async (): Promise<number> => {
+  staleness ??= Number(await push().maxAge());
+  return staleness;
+};
+
+/**
+ * Which marks are worth a transaction this round.
+ *
+ * Two reasons to post, and a pair's mark needs only one of them:
+ *
+ *  - **it moved**, by more than `MIN_MOVE_BPS`, so the mark on chain is no
+ *    longer the price;
+ *  - **it is ageing**, past half the oracle's staleness window, so leaving it
+ *    would take the market out of trading before the next round comes round.
+ *
+ * Everything else is already correct on chain, and rewriting it costs gas to
+ * store a number that is already there. Sixty-four pairs refreshed every
+ * fifteen seconds whether or not they moved is roughly a quarter of an ether a
+ * day; this is what makes the difference between a keeper that runs for a week
+ * and one that runs out overnight.
+ */
+const worthPosting = async (marks: Mark[]): Promise<Mark[]> => {
+  const window = await maxAge();
+  const now = Math.floor(Date.now() / 1000);
+  const threshold = BigInt(config.MIN_MOVE_BPS);
+
+  const oracle = push();
+  const out: Mark[] = [];
+
+  // Read in chunks: sixty-four `eth_call`s at once is rude to a public node,
+  // and sixty-four in series is slower than the round it is meant to save.
+  const CHUNK = 16;
+
+  for (let i = 0; i < marks.length; i += CHUNK) {
+    const slice = marks.slice(i, i + CHUNK);
+
+    const current = await Promise.all(
+      slice.map(async (mark) => {
+        try {
+          return await oracle.markAt(marketId(mark.symbol));
+        } catch {
+          return null;
+        }
+      }),
+    );
+
+    slice.forEach((mark, index) => {
+      const row = current[index];
+
+      // Never posted, or unreadable: post it.
+      if (!row || row[1] === 0n) {
+        out.push(mark);
+        return;
+      }
+
+      const [previous, at] = row;
+      if (now - Number(at) >= window / 2) {
+        out.push(mark);
+        return;
+      }
+
+      if (previous === 0n) {
+        out.push(mark);
+        return;
+      }
+
+      const gap = mark.value > previous ? mark.value - previous : previous - mark.value;
+      if ((gap * BPS) / previous >= threshold) out.push(mark);
+    });
+  }
+
+  return out;
+};
+
 const postMarks = async (): Promise<void> => {
   const marks = await fetchMarks();
   if (marks.length === 0) {
@@ -142,20 +232,22 @@ const postMarks = async (): Promise<void> => {
     return;
   }
 
-  const oracle = new Contract(
-    config.ORACLE_ADDRESS,
-    abi.pushOracle as never,
-    signer,
-  ) as unknown as PushOracleContract;
+  const posting = await worthPosting(marks);
 
-  const ids = marks.map((mark) => marketId(mark.symbol));
-  const values = marks.map((mark) => mark.value);
+  if (posting.length === 0) {
+    console.log(`[prices] PUSH oracle: nothing moved, ${marks.length} marks left as they are`);
+    return;
+  }
 
-  const transaction = await oracle.postMarks(ids, values);
+  const ids = posting.map((mark) => marketId(mark.symbol));
+  const values = posting.map((mark) => mark.value);
+
+  const transaction = await push().postMarks(ids, values);
   const receipt = await transaction.wait();
 
   console.log(
-    `[prices] PUSH oracle: ${marks.length} marks posted, quote ${quoteAge()}s old, block ${receipt?.blockNumber ?? "?"}`,
+    `[prices] PUSH oracle: ${posting.length} of ${marks.length} marks posted, ` +
+      `quote ${quoteAge()}s old, block ${receipt?.blockNumber ?? "?"}`,
   );
 };
 

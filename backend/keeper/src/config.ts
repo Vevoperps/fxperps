@@ -54,6 +54,17 @@ const schema = z.object({
    * that means for the venue is not.
    */
   FX_URL: z.string().url().default("https://api.fxratesapi.com/latest"),
+
+  /**
+   * How far a rate must move before it is worth a transaction, in bps.
+   *
+   * A currency pair that has not moved since the last round does not need its
+   * mark rewritten, and rewriting it anyway is how a keeper spends a day's gas
+   * on storing the same number sixty-four times a minute. Anything still fresh
+   * and unchanged is left alone; see `prices.ts` for the other half of the
+   * rule, which refreshes a mark before it can go stale regardless.
+   */
+  MIN_MOVE_BPS: z.coerce.number().int().nonnegative().default(2),
 });
 
 const parsed = schema.safeParse(process.env);

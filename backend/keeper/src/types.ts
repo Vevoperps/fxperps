@@ -53,6 +53,7 @@ export interface MockOracleContract {
 export interface PushOracleContract {
   postMarks(markets: string[], values: bigint[]): Promise<ContractTransactionResponse>;
   markAt(market: string): Promise<[bigint, bigint]>;
+  maxAge(): Promise<bigint>;
 }
 
 export interface PythContract {
