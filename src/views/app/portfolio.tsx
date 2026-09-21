@@ -195,9 +195,18 @@ export const Portfolio = ({ compact = false }: { compact?: boolean }) => {
             {busy === "withdraw" ? app.ticket.working : app.portfolio.withdraw}
           </button>
 
-          {/* Local chains only. The faucet is a function on the mock
-              settlement token and exists nowhere else. */}
-          {live && venue.isLocal ? (
+          {/*
+            Test networks only. The faucet is a function on the mock
+            settlement token and exists nowhere else — against a real one the
+            call reverts, which is why the button is not rendered rather than
+            rendered and disappointing.
+
+            This used to be gated on the chain being *local*, which was true
+            while anvil was the only place this ran. On a public testnet it
+            left no way to obtain the settlement token at all: deposit was
+            available and there was nothing to deposit.
+          */}
+          {live && venue.network.testnet ? (
             <button
               type="button"
               disabled={busy !== null}
