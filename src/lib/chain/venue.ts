@@ -1,4 +1,5 @@
 import { brand } from "@/lib/brand";
+import { networkOf } from "@/lib/chain/networks";
 
 /**
  * Where the venue lives, and whether it exists yet.
@@ -55,9 +56,12 @@ export const venue = {
   deployBlock: Number.isFinite(deployBlock) ? deployBlock : 0,
 
   /** What a wallet needs to add the chain if it does not know it. */
+  /** What to call the configured chain, and whether its tokens are play money. */
+  network: networkOf(chainId),
+
   chain: {
     chainId: `0x${chainId.toString(16)}`,
-    chainName: brand.chain.name,
+    chainName: networkOf(chainId).name,
     rpcUrls: rpcUrl ? [rpcUrl] : [],
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   },

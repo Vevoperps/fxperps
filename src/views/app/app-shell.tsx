@@ -121,12 +121,15 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
  */
 export const PreviewBanner = () => {
   const local = venue.live && venue.isLocal;
+  const testnet = venue.live && !venue.isLocal && venue.network.testnet;
 
   const text = !venue.live
     ? app.banner
     : local
       ? app.bannerLocal
-      : app.bannerLive(brand.chain.name);
+      : testnet
+        ? app.bannerTestnet(venue.network.name)
+        : app.bannerLive(venue.network.name);
 
   return (
     <div className="mx-auto w-full max-w-[90rem] px-5 pt-6 sm:px-8">

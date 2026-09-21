@@ -28,6 +28,13 @@ export const app = {
   bannerLocal:
     "connected to a local development chain. the settlement token here is a mock with an open faucet and is worth nothing.",
   /**
+   * A public testnet is the awkward middle: every screen is real, every
+   * transaction is real, and none of the money is. Saying "live" and stopping
+   * there would be true and misleading at once.
+   */
+  bannerTestnet: (chain: string) =>
+    `live on ${chain.toLowerCase()} — a test network. every price, balance and position is read from the contract, and the settlement token is a mock with an open faucet, worth nothing.`,
+  /**
    * `ready: false` prints the item and refuses to link it. A nav that leads to
    * a 404 is worse than one that says a screen is still being built.
    */
