@@ -191,7 +191,7 @@ export const AppMarket = ({
             </header>
 
             <div className="border-t border-rule-ink">
-              <PriceChart symbol={pair.symbol} mark={mark} />
+              <PriceChart symbol={pair.symbol} />
             </div>
           </div>
 
