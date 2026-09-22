@@ -161,7 +161,7 @@ export const AppMarket = ({
                   ],
                   [
                     app.market.stats.interest,
-                    openInterest === null ? "—" : money(openInterest),
+                    openInterest === null ? "·" : money(openInterest),
                     "plain",
                   ],
                   [app.market.stats.session, session, "plain"],
@@ -279,10 +279,10 @@ export const AppMarket = ({
                   {(funding * 100).toFixed(4)}%
                 </td>
                 <td className="px-4 py-4 text-right tabular-nums text-dim-ink">
-                  {onchain ? money(live?.longOpenInterest ?? 0) : "—"}
+                  {onchain ? money(live?.longOpenInterest ?? 0) : "·"}
                 </td>
                 <td className="px-4 py-4 text-right tabular-nums text-dim-ink">
-                  {onchain ? money(live?.shortOpenInterest ?? 0) : "—"}
+                  {onchain ? money(live?.shortOpenInterest ?? 0) : "·"}
                 </td>
                 <td className="px-4 py-4 text-right text-dim-ink">
                   {session}

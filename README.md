@@ -1,107 +1,164 @@
-# <img width="2172" height="724" alt="image" src="https://github.com/user-attachments/assets/f7a29598-1869-4168-8525-41ceb747a0ab" />
-
 # vevo
 
-Perpetual futures on the world's currencies against the dollar. Open 24/7, one
-balance, settled onchain.
+Perpetual futures on 64 world currencies against the US dollar, settled onchain
+in USDG. One balance, up to 25x, no order book: every fill happens at the
+venue's own mark.
 
-[vevoperps.com](https://vevoperps.com)
+Live at [vevoperps.com](https://vevoperps.com).
 
----
+## What this repository is
 
-## What is in here
+Four pieces that ship together.
 
-One repository, three deployables, one source of truth for the numbers.
-
-```
-src/            The site and the app. Next.js 16, React 19, Tailwind 4.
-  app/            Routes. They delegate to views and hold no logic.
-  views/          The screens: landing, docs, and the app terminal.
-  lib/chain/      Everything that talks to the engine.
-  data/           Every word the product says, in three files.
-backend/
-  contracts/      Foundry. The engine, the oracle adapter, the tests.
-  keeper/         Node 22 + TypeScript. Posts prices, liquidates.
-  shared/         Generated: the market table and the ABIs.
-  tools/          The generators that write shared/.
-obsidian/       The project's own documentation vault.
-```
-
-The market table is written once, in `src/lib/markets.ts`, and generated from
-there into Solidity and JSON. Nothing re-types those 64 rows by hand, and CI
-fails if the generated copies are stale — because the failure that matters is
-the silent one, where the app and the chain disagree about what a pair is
-allowed to do.
+| Piece | Path | What it does |
+| --- | --- | --- |
+| Landing and docs | `src/app`, `src/views/home` | The public site and the handbook |
+| Trading app | `src/views/app` | Terminal, portfolio, pool, token |
+| Contracts | `backend/contracts` | The engine, the oracle, the deploy scripts |
+| Keeper | `backend/keeper` | Posts marks, liquidates, takes daily snapshots |
 
 ## How the venue works
 
-**The venue is the counterparty.** There is no order book. A trade fills at the
-oracle's mark and the other side of it is a pool of settlement tokens that
-liquidity providers own. That is what makes a frontier currency tradeable at
-three in the morning, and it is what the payout cap is for: every open position
-has the most it can ever return reserved out of that pool, so the number on the
-ticket is backed rather than promised.
+The engine is peer to pool. There is no counterparty on the other side of a
+trade; the pool is, and every open position has its payout cap reserved out of
+that pool before it opens. So an empty pool is a venue where nothing trades,
+and pool size is the ceiling on open interest.
 
-**Custody stays with the trader.** No function lets the owner touch a balance,
-no pause traps a withdrawal, and closing a position works on a paused market.
-Listing markets and setting their parameters is the whole of what the admin key
-can do.
-
-**Maintenance is permissionless.** Anyone can call `poke` and `liquidate`, and
-a liquidator is paid out of what is left of the position. The keeper in this
-repository is a convenience, not a dependency.
-
-The arithmetic — the fee, the funding cap, the maintenance floor, the payout
-cap — is defined once in `backend/contracts/src/libraries/PositionMath.sol`,
-printed by the site, stated in the handbook, and asserted in
-`backend/contracts/test/PerpEngine.t.sol`. If any of the four ever disagree,
-the test suite fails before a user finds out.
-
-`backend/README.md` has the full walk-through.
-
-## Running it
-
-```sh
-yarn install
-yarn dev            # http://localhost:3000
+```
+notional     = margin x leverage
+fee          = 0.05% of notional, each way
+liquidation  = entry x (1 - (1 / leverage - 0.005))
+max payout   = 10 x margin, fixed when the position opens
 ```
 
-That gives you the **preview**: the marks are generated, the ticket prices
-correctly and refuses to submit, and every screen says so. Nothing else is
-needed to work on the site.
+Prices reach the chain through a keeper that fetches conventional FX rates and
+posts them to a `PushOracle`, where it is the named publisher. Marks on that
+oracle are posted, not signed. Pyth was the original plan and is not usable
+here: its public endpoint closed in August 2026, the free key excludes FX, and
+it never carried the frontier currencies this venue lists.
 
-For the real thing on your own machine — a local chain with all 64 markets,
-a faucet, and the whole path from deposit to withdrawal — see
-[backend/README.md](backend/README.md). It needs Foundry and two commands.
+## Live deployment
+
+Robinhood Chain mainnet, chain id `4663`.
+
+| Contract | Address |
+| --- | --- |
+| PerpEngine | `0x26fdBD849ed358cffa153A10cFF7b4fA41596b7A` |
+| PushOracle | `0x27331183F3293A6a782D2dc0F692A1a0314bDd43` |
+| USDG (settlement) | `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168` |
+
+USDG is Robinhood Chain's native stablecoin, six decimals, issued by Paxos.
+It is not ours and not a mock.
+
+## Running the site
+
+```bash
+yarn install
+yarn dev
+```
+
+Then `yarn build` before opening a pull request. The checks that matter:
+
+```bash
+npx tsc --noEmit
+npx eslint src/
+yarn build
+```
 
 ### Environment
 
-Copy `.env.example` to `.env.local` and fill in what you need. Every variable
-is documented there. Two worth knowing:
+The app reads everything about the chain from the environment, so pointing it
+at a different deployment needs no code change. Contract addresses are public
+the moment they exist, which is why they carry the `NEXT_PUBLIC_` prefix;
+nothing secret is ever put here, and the app holds no key and signs nothing.
 
-- `SITE_PASSWORD` — the pre-launch gate. **There is no default.** Unset means
-  the gate is off, which is what a clone wants; production sets it in Vercel.
-- `NEXT_PUBLIC_ENGINE_ADDRESS` — set it and the app stops previewing and starts
-  reading the contract.
+```
+NEXT_PUBLIC_CHAIN_ID=4663
+NEXT_PUBLIC_RPC_URL=https://rpc.mainnet.chain.robinhood.com
+NEXT_PUBLIC_ENGINE_ADDRESS=0x26fdBD849ed358cffa153A10cFF7b4fA41596b7A
+NEXT_PUBLIC_SETTLEMENT_ADDRESS=0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168
+NEXT_PUBLIC_DEPLOY_BLOCK=69562726
+```
+
+With no engine address configured the app renders as a read only preview and
+says so on every screen, rather than showing buttons over a venue that is not
+there.
+
+## Contracts
+
+Foundry, Solidity 0.8.24, `evm_version = "paris"`. The paris setting is not
+cosmetic: Robinhood Chain is an Arbitrum Orbit rollup, Orbit chains do not all
+carry the PUSH0 opcode Shanghai introduced, and bytecode containing it deploys
+cleanly and reverts on the first call.
+
+```bash
+cd backend/contracts
+forge build
+forge test
+```
+
+Deploy order. Every step wants `--slow` on this chain.
+
+```bash
+forge script script/Deploy.s.sol:Deploy          --rpc-url $RPC_URL --broadcast --slow
+forge script script/ListMarkets.s.sol:ListMarkets --rpc-url $RPC_URL --broadcast --slow
+forge script script/SetPushOracle.s.sol:SetPushOracle --rpc-url $RPC_URL --broadcast --slow
+forge script script/ProvideLiquidity.s.sol:ProvideLiquidity --rpc-url $RPC_URL --broadcast --slow
+```
+
+`ListMarkets` is the resume path. It reads which markets the engine already
+holds, diffs that against the table and sends only the difference, so it is
+safe to run twice and converges on the same place. `forge script --resume` is
+not: it replays the saved broadcast with the nonces it recorded, and one nonce
+desync makes every retry fail having sent nothing.
+
+`SetFeeds.s.sol` belongs to the Pyth path and is not part of this deployment.
+
+`ProvideLiquidity` spends real tokens out of the caller's balance and mints
+nothing. Its testnet counterpart `SeedLiquidity` mints, and refuses to run on
+chain 4663.
+
+### Gas on Orbit chains
+
+`eth_gasPrice` answers below the chain's own `baseFeePerGas`. Anything that
+trusts it builds a transaction the same node then rejects with `max fee per gas
+less than block base fee`. So `cast send` needs `--gas-price 1gwei`, and the
+app quotes the fee off the block header instead, at four times the base fee
+plus a tip. EIP-1559 refunds the surplus, so bidding high costs nothing.
+
+## Keeper
+
+```bash
+cd backend/keeper
+yarn install
+yarn build
+node --env-file=.env dist/index.js
+```
+
+Deployed on Railway with root directory `backend` and `keeper/Dockerfile`.
+Copy `.env.example` and fill it in. The key it signs with can post marks and
+liquidate; neither can move anyone's balance, so it wants a wallet holding gas
+and nothing else.
+
+Two settings are load bearing. `MIN_MOVE_BPS` skips a pair that has not moved,
+because rewriting all 64 marks every round costs a fraction of an ether a day.
+Snapshots go out in batches of eight with the nonce re-read from the node
+before each batch: sending them in one parallel burst collides with itself, and
+sending them one at a time outruns the oracle's staleness window.
 
 ## Deploying
 
-| | |
-|---|---|
-| Site | Vercel, from the repository root. `npx vercel --prod` |
-| Contracts | Foundry, `backend/contracts/script/Deploy.s.sol` |
-| Keeper | Railway, root directory `backend`, Dockerfile `keeper/Dockerfile` |
+```bash
+npx vercel --prod
+```
 
-`.vercelignore` keeps `backend/` and `obsidian/` out of the site build.
+## Conventions
 
-## Status
+The full rules live in `AGENTS.md` and the Obsidian vault under `obsidian/`,
+which is the source of truth for how this project is built. The short version:
+all motion is spring based, no hardcoded style values outside the token layer,
+routes delegate to views, server components by default, and no `any`.
 
-Pre-launch. The contracts are **not audited**. The app runs against a local
-chain today; the testnet and mainnet deployments wait on the settlement token
-address, an RPC endpoint and the oracle's own address on the target chain.
+## Licence
 
-## License
-
-See [LICENSE.md](LICENSE.md). The repository is readable so the arithmetic can
-be checked; it is not a grant to redeploy it. The contract sources under
-`backend/contracts/src/` are MIT, as their headers say.
+No licence granted. All rights reserved.

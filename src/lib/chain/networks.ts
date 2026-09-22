@@ -22,11 +22,23 @@ export interface Network {
 }
 
 const KNOWN: Record<number, Network> = {
-  [brand.chain.id]: { name: brand.chain.name, testnet: false, explorer: null },
-
   1: { name: "Ethereum", testnet: false, explorer: "https://etherscan.io" },
   42161: { name: "Arbitrum One", testnet: false, explorer: "https://arbiscan.io" },
   8453: { name: "Base", testnet: false, explorer: "https://basescan.org" },
+
+  // Robinhood Chain, an Arbitrum Orbit rollup. Both ids are named because the
+  // testnet is where this deployment gets proved, and a page that cannot tell
+  // the two apart is a page that cannot warn anybody which one they are on.
+  4663: {
+    name: "Robinhood Chain",
+    testnet: false,
+    explorer: "https://robinhoodchain.blockscout.com",
+  },
+  46630: {
+    name: "Robinhood Chain Testnet",
+    testnet: true,
+    explorer: "https://explorer.testnet.chain.robinhood.com",
+  },
 
   11155111: { name: "Sepolia", testnet: true, explorer: "https://sepolia.etherscan.io" },
   421614: {
@@ -40,5 +52,23 @@ const KNOWN: Record<number, Network> = {
   1337: { name: "a local development chain", testnet: true, explorer: null },
 };
 
-export const networkOf = (chainId: number): Network =>
-  KNOWN[chainId] ?? { name: `chain ${chainId}`, testnet: true, explorer: null };
+/**
+ * A rebrand can aim this venue at a chain the table does not name. That case
+ * falls back to the brand's own wording rather than to a bare number — but it
+ * is a fallback, not an entry, because the table also knows the explorer and
+ * whether the money on that chain is real.
+ *
+ * Anything else prints as its id. `testnet: true` there is the safe default:
+ * the worst outcome is a testnet banner over a real deployment nobody
+ * configured, which is visible; the reverse is silent.
+ */
+export const networkOf = (chainId: number): Network => {
+  const known = KNOWN[chainId];
+  if (known) return known;
+
+  if (chainId === brand.chain.id) {
+    return { name: brand.chain.name, testnet: false, explorer: null };
+  }
+
+  return { name: `chain ${chainId}`, testnet: true, explorer: null };
+};

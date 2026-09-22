@@ -33,7 +33,7 @@ export const app = {
    * there would be true and misleading at once.
    */
   bannerTestnet: (chain: string) =>
-    `live on ${chain.toLowerCase()} — a test network. every price, balance and position is read from the contract, and the settlement token is a mock with an open faucet, worth nothing.`,
+    `live on ${chain.toLowerCase()}, a test network. every price, balance and position is read from the contract, and the settlement token is a mock with an open faucet, worth nothing.`,
   /**
    * `ready: false` prints the item and refuses to link it. A nav that leads to
    * a 404 is worse than one that says a screen is still being built.
@@ -43,6 +43,7 @@ export const app = {
     { href: "/app/pairs", label: "All pairs", ready: true },
     { href: "/app/pool", label: "Pool", ready: true },
     { href: "/app/portfolio", label: "Portfolio", ready: true },
+    { href: "/app/vevo", label: `$${brand.token.ticker}`, ready: true },
   ],
 
   wallet: {
@@ -297,7 +298,7 @@ export const app = {
       pnl: "Unrealised",
       liquidation: "Liquidation",
     },
-    tabs: ["Positions", "Orders", "History", "Transfers"],
+    tabs: ["Positions", "Orders", "History", "Transfers", "Receipts"],
     /** How each recorded event reads in the list. */
     activity: {
       closed: "Closed",
@@ -320,7 +321,121 @@ export const app = {
         "0 resting orders. this venue fills at the mark, so orders do not rest.",
       History: "0 closed positions.",
       Transfers: "0 deposits or withdrawals.",
+      Receipts: "no receipts yet. close a position and one prints here.",
     } as Record<string, string>,
     connect: "Connect a wallet to see your portfolio.",
+  },
+
+  /**
+   * The token screen.
+   *
+   * **Everything numeric here is a slot, not a claim.** Supply, distribution
+   * and the stake a tier asks for are decisions that have not been made, and a
+   * page that prints a plausible number for one of them is publishing a fact
+   * about a token nobody has minted. So each is `null` until it is real, and
+   * the screen prints `tba` in its place rather than a figure that would have
+   * to be taken back.
+   *
+   * The mechanics below are settled and are stated plainly: fees flow to
+   * stakers, and settlement stays in the dollar stablecoin.
+   */
+  vevo: {
+    title: `$${brand.token.ticker}`,
+    heading: ["One venue,", "one token."],
+    lede: `${brand.token.ticker} is the token of the venue. it is not what positions settle in: margin and payouts stay in ${brand.chain.settlement}, and that is deliberate.`,
+    tba: "tba",
+
+    facts: {
+      title: "The token",
+      ticker: "Ticker",
+      contract: "Contract",
+      contractSoon: "not minted yet",
+      chain: "Chain",
+      supply: "Total supply",
+      /** Filled in when the token exists. */
+      supplyValue: null as string | null,
+      copy: "Copy",
+      copied: "Copied",
+      explorer: "View on explorer",
+    },
+
+    distribution: {
+      title: "Distribution",
+      note: "published here the day it is fixed, and not before.",
+      /**
+       * `share` is a percentage. Every row stays null until the split is
+       * decided; the screen prints the label and `tba` beside it.
+       */
+      rows: [
+        { label: "Liquidity", share: null as number | null },
+        { label: "Community", share: null as number | null },
+        { label: "Treasury", share: null as number | null },
+        { label: "Team", share: null as number | null },
+      ],
+    },
+
+    staking: {
+      title: "Stake for a share of fees",
+      lede: `every trade pays 0.05% on the way in and 0.05% on the way out. a share of that goes to staked ${brand.token.ticker}, claimable in ${brand.chain.settlement}.`,
+      stakeLabel: `Amount, ${brand.token.ticker}`,
+      stake: "Stake",
+      unstake: "Unstake",
+      claim: "Claim rewards",
+      staked: "Your stake",
+      rewards: "Claimable",
+      totalStaked: "Total staked",
+      /**
+       * No vault is deployed, so the buttons say so instead of failing on a
+       * signature. The moment the address is configured these become live.
+       */
+      soon: "Staking opens when the vault is deployed",
+      why: "the vault is the audited synthetix staking pattern: stake, accrue, claim, withdraw. no lockup, no admin key over your stake.",
+    },
+
+    tiers: {
+      title: "Trade cheaper as you stake",
+      lede: "a larger stake lowers what a trade costs you. the thresholds are set before launch and printed here once they are.",
+      columns: { tier: "Tier", stake: "Stake", fee: "Fee per side" },
+      rows: [
+        { tier: "Base", stake: null as string | null, fee: "0.05%" },
+        { tier: "Tier 1", stake: null as string | null, fee: null as string | null },
+        { tier: "Tier 2", stake: null as string | null, fee: null as string | null },
+        { tier: "Tier 3", stake: null as string | null, fee: null as string | null },
+      ],
+      soon: "Tiers open with the staking vault",
+    },
+
+    honesty: {
+      title: `Why margin is not ${brand.token.ticker}`,
+      body: `a position is a bet on a currency, not on us. if margin were held in ${brand.token.ticker}, a trader could read the yen correctly and still be liquidated because the token moved against them overnight. so collateral and payouts stay in ${brand.chain.settlement}, and ${brand.token.ticker} earns from the venue instead of standing inside it.`,
+    },
+
+    connect: "Connect a wallet to see your stake.",
+  },
+
+  /**
+   * The slip a closed position prints.
+   *
+   * Short, upper case, and shaped like a till roll: the landing sells the
+   * venue on the idea that a fill prints its own ticket, and the app has to
+   * actually print one or the promise was decoration.
+   */
+  receipt: {
+    header: "vevo perpetual futures",
+    printed: "Receipt printed",
+    dismiss: "Done",
+    pair: "PAIR",
+    margin: "MARGIN",
+    exit: "EXIT",
+    result: "RESULT",
+    fee: "FEE",
+    funding: "FUNDING",
+    payout: "Payout",
+    filled: "closed at the mark. no order book, no queue.",
+    settled: (chain: string) => `settled on ${chain.toLowerCase()}.`,
+    verify: "Verify",
+    unknown: "unknown pair",
+    /** The Receipts tab, when nothing has closed yet. */
+    empty: "no receipts yet. close a position and one prints here.",
   },
 } as const;

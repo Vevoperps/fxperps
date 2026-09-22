@@ -35,8 +35,10 @@ int_types = "long"
 
 [rpc_endpoints]
 robinhood = "${RPC_URL}"
+robinhood_testnet = "https://rpc.testnet.chain.robinhood.com"
 arbitrum_sepolia = "${TESTNET_RPC_URL}"
 
 [etherscan]
 robinhood = {key = "${EXPLORER_API_KEY}", url = "${EXPLORER_API_URL}", chain = 4663}
+robinhood_testnet = {key = "${EXPLORER_API_KEY}", url = "https://explorer.testnet.chain.robinhood.com/api", chain = 46630}
 arbitrum_sepolia = {key = "${EXPLORER_API_KEY}", url = "https://api-sepolia.arbiscan.io/api", chain = 421614}

@@ -336,7 +336,7 @@ export const explainRevert = (error: unknown): string => {
   // still does, the wallet overrode it — and saying which knob to turn is more
   // use than repeating the node's wording.
   if (/max fee per gas less than block base fee/i.test(text)) {
-    return "the wallet bid below the network's base fee — raise the max fee in its advanced gas settings, or try again";
+    return "the wallet bid below the network's base fee. raise the max fee in its advanced gas settings, or try again";
   }
 
   // Nothing recognised it. Say so, and hand over what the chain actually
@@ -346,6 +346,6 @@ export const explainRevert = (error: unknown): string => {
   // quoted.
   const detail = parts[0]?.trim();
   return detail
-    ? `the transaction did not go through — ${detail.slice(0, 160)}`
+    ? `the transaction did not go through: ${detail.slice(0, 160)}`
     : "the transaction did not go through";
 };

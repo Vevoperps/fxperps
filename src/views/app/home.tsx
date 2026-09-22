@@ -175,7 +175,7 @@ export const AppHome = () => {
                     </td>
                     <td className="px-5 py-3.5 text-dim-ink">{row.name}</td>
                     <td className="px-5 py-3.5 text-right tabular-nums">
-                      {row.mark ? row.mark.toFixed(decimalsFor(row.mark)) : "—"}
+                      {row.mark ? row.mark.toFixed(decimalsFor(row.mark)) : "·"}
                     </td>
                     <td
                       className={`px-5 py-3.5 text-right tabular-nums ${
@@ -186,7 +186,7 @@ export const AppHome = () => {
                             : "text-dim-ink"
                       }`}
                     >
-                      {row.mark ? formatChange(row.change24h, row.changeKnown !== false) : "—"}
+                      {row.mark ? formatChange(row.change24h, row.changeKnown !== false) : "·"}
                     </td>
                     <td className="px-5 py-3.5 text-right tabular-nums text-dim-ink">
                       {(row.fundingRate * 100).toFixed(4)}%

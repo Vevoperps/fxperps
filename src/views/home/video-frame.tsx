@@ -69,8 +69,19 @@ export const VideoFrame = () => {
                 </span>
               </button>
             ) : (
-              <span className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                <span aria-hidden className="size-3 bg-accent" />
+              /*
+                No recording yet, so this is the shape of one: the play target
+                a viewer expects, drawn and inert, with the caption saying why
+                it does nothing. A bare dot in an empty rectangle read as a
+                broken embed; this reads as a slot waiting to be filled.
+              */
+              <span className="absolute inset-0 flex flex-col items-center justify-center gap-5">
+                <span
+                  aria-hidden
+                  className="flex h-12 w-[4.5rem] items-center justify-center rounded-[0.75rem] bg-ink-on-ink/15"
+                >
+                  <span className="ml-1 border-y-[0.5rem] border-l-[0.85rem] border-y-transparent border-l-ink-on-ink/60" />
+                </span>
                 <Label tone="ink">{video.placeholder}</Label>
               </span>
             )}

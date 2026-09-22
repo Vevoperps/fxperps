@@ -1,0 +1,9 @@
+{
+  "chainId": 4663,
+  "deployedAt": 1790072122,
+  "engine": "0x26fdBD849ed358cffa153A10cFF7b4fA41596b7A",
+  "oracle": "0x27331183F3293A6a782D2dc0F692A1a0314bDd43",
+  "oracleKind": "push",
+  "publisher": "0x354Bfdce4877fEC2fa5b5eE1619aba2F3E6076eE",
+  "settlement": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168"
+}

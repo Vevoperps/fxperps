@@ -34,7 +34,7 @@ export interface HomeCopy {
 
 export const homeCopy: HomeCopy = {
   company: "Voxelelia.",
-  title: "Voxelelia — a chess board rendered in real time",
+  title: "Voxelelia, a chess board rendered in real time",
   nav: [
     { label: "Pieces", href: "#pieces" },
     { label: "Openings", href: "#openings" },
@@ -44,7 +44,7 @@ export const homeCopy: HomeCopy = {
   contact: { label: "Say hello", href: "#contact" },
   headline: ["Play the board", "in real time."],
   description:
-    "Twelve pieces under real physics, lit and rendered in the browser. Move the cursor — the board answers.",
+    "Twelve pieces under real physics, lit and rendered in the browser. Move the cursor, and the board answers.",
   action: "Start a match",
   stats: [
     { value: "60", label: "Frames a second" },

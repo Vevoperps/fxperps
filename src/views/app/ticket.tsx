@@ -17,6 +17,7 @@ import { money, signed, toAmount } from "@/lib/chain/units";
 import { venue } from "@/lib/chain/venue";
 import { useWallet } from "@/lib/chain/wallet";
 import { decimalsFor } from "@/views/home/use-markets";
+import { ReceiptCard } from "@/views/app/receipt";
 
 /**
  * The order ticket: a side, a margin, a leverage, and the four numbers that
@@ -73,6 +74,7 @@ export const Ticket = ({
   const [leverage, setLeverage] = useState(Math.min(5, maxLeverage));
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [wantsReceipt, setWantsReceipt] = useState(false);
 
   const address = useWallet((state) => state.address);
   const chainId = useWallet((state) => state.chainId);
@@ -130,7 +132,22 @@ export const Ticket = ({
     void run(async () => {
       if (!symbol) return;
       await closePosition(symbol);
+      // The slip is asked for here and rendered below once the close event
+      // reaches the snapshot. `run` has already called `reload`, so that is a
+      // poll away rather than a round trip of its own.
+      setWantsReceipt(true);
     });
+
+  // The newest event that ended a position on this pair. Nothing is fabricated
+  // while waiting: with no event yet there is no slip.
+  const receipt =
+    wantsReceipt && symbol
+      ? (snapshot?.activity ?? []).find(
+          (one) =>
+            one.symbol === symbol &&
+            (one.kind === "closed" || one.kind === "liquidated"),
+        )
+      : undefined;
 
   const onAddMargin = (amount: string) =>
     void run(async () => {
@@ -146,6 +163,11 @@ export const Ticket = ({
 
   return (
     <aside className="flex h-full flex-col border border-rule-ink bg-surface-ink-2/40">
+      {/* The slip, above the ticket that produced it, until it is dismissed. */}
+      {receipt ? (
+        <ReceiptCard event={receipt} onDismiss={() => setWantsReceipt(false)} />
+      ) : null}
+
       <div className="grid grid-cols-2 gap-px bg-rule-ink">
         {(["long", "short"] as const).map((option) => (
           <button

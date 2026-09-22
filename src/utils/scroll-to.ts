@@ -1,54 +1,52 @@
 /**
- * @fileoverview Utility function for smooth scrolling to elements or positions
- * Handles both scrolling to element IDs and numeric positions
- * Temporarily disables scroll state during animation if scroll is enabled
+ * Moving the page, through the thing that actually owns the page's position.
+ *
+ * **Why this is not `window.scrollTo`.** Lenis runs its own loop: every frame
+ * it reads the position it believes the page should be at and writes that to
+ * the document. A native scroll, an `href="#section"` jump, anything that sets
+ * the position behind its back, is therefore undone on the very next frame.
+ * The page twitches and stays where it was, which is exactly what a dead
+ * anchor looks like.
+ *
+ * So every deliberate move goes through Lenis when Lenis is running, and falls
+ * back to the browser only when it is not — on a route with smooth scrolling
+ * off, or before the controller has mounted.
  */
 
-//if lenis
 import { useScroll } from "@/hooks/smooth-scroll/use-scroll";
-//endif
 
-export const scrollTo = (id?: string | number, immediate?: boolean) => {
-  //if lenis
-  const isEnabled = useScroll.getState().isEnableScroll;
-  //endif
+/** A section id, a `#id`, an element, or an absolute offset in pixels. */
+export type ScrollTarget = string | number | HTMLElement;
 
-  if (typeof id === "string") {
-    const el = document.getElementById(id);
-    if (!el) {
-      return;
-    }
+const asSelector = (target: string): string =>
+  target.startsWith("#") ? target : `#${target}`;
 
-    //if lenis
-    if (isEnabled) {
-      useScroll.setState({ isEnableScroll: false });
-    }
-    //endif
+export const scrollTo = (target: ScrollTarget, immediate = false): void => {
+  const lenis = useScroll.getState().lenis;
 
-    setTimeout(() => {
-      window.scrollTo({
-        top: getDistanceFromTop(el),
-        behavior: immediate ? "instant" : "smooth",
-      });
-    }, 50);
-  } else {
-    setTimeout(() => {
-      window.scrollTo({
-        top: Number(id) || 0,
-        behavior: immediate ? "instant" : "smooth",
-      });
-    }, 50);
+  if (lenis) {
+    lenis.scrollTo(typeof target === "string" ? asSelector(target) : target, {
+      immediate,
+      // A jump that lands under the fixed header has landed in the wrong
+      // place. The bar is 3.25rem tall with its padding, so clear it.
+      offset: typeof target === "number" ? 0 : -52,
+      lock: true,
+    });
+    return;
   }
 
-  if (isEnabled) {
-    setTimeout(() => {
-      useScroll.setState({ isEnableScroll: true });
-    }, 100);
-  }
+  const top =
+    typeof target === "number"
+      ? target
+      : (() => {
+          const node =
+            typeof target === "string"
+              ? document.getElementById(asSelector(target).slice(1))
+              : target;
+          if (!node) return null;
+          return node.getBoundingClientRect().top + window.scrollY - 52;
+        })();
 
-  function getDistanceFromTop(element: HTMLElement) {
-    const rect = element.getBoundingClientRect();
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    return rect.top + scrollTop;
-  }
+  if (top === null) return;
+  window.scrollTo({ top, behavior: immediate ? "instant" : "smooth" });
 };

@@ -11,6 +11,7 @@ import type { Activity } from "@/lib/chain/read";
 import { brand } from "@/lib/brand";
 import { deposit, explainRevert, faucet, withdraw } from "@/lib/chain/engine";
 import { money, signed, toAmount } from "@/lib/chain/units";
+import { Receipt } from "@/views/app/receipt";
 import { venue } from "@/lib/chain/venue";
 import { useWallet } from "@/lib/chain/wallet";
 import { decimalsFor } from "@/views/home/use-markets";
@@ -50,6 +51,15 @@ export const Portfolio = ({ compact = false }: { compact?: boolean }) => {
   const transfers = activity.filter(
     (one) => one.kind === "deposit" || one.kind === "withdraw",
   );
+  // A receipt is printed by anything that ended a position, however it ended:
+  // a close, a partial close, or a liquidation. Especially a liquidation, which
+  // is the one a trader most wants the numbers for.
+  const receipts = activity.filter(
+    (one) =>
+      one.kind === "closed" ||
+      one.kind === "reduced" ||
+      one.kind === "liquidated",
+  );
 
   const live = venue.live && address !== null;
   const idle = snapshot ? money(snapshot.free) : "0.00";
@@ -88,6 +98,7 @@ export const Portfolio = ({ compact = false }: { compact?: boolean }) => {
     Orders: 0,
     History: history.length,
     Transfers: transfers.length,
+    Receipts: receipts.length,
   };
 
   return (
@@ -259,6 +270,12 @@ export const Portfolio = ({ compact = false }: { compact?: boolean }) => {
           <ActivityTable rows={history} />
         ) : tab === "Transfers" && transfers.length > 0 ? (
           <ActivityTable rows={transfers} />
+        ) : tab === "Receipts" && receipts.length > 0 ? (
+          <div className="flex flex-wrap gap-6 p-5">
+            {receipts.map((event) => (
+              <Receipt key={event.hash} event={event} />
+            ))}
+          </div>
         ) : (
           <p className="px-5 py-6 font-mono text-xs text-dim-ink">
             {app.portfolio.empty[tab]}
@@ -389,12 +406,12 @@ const ActivityTable = ({ rows }: { rows: Activity[] }) => (
                   {row.symbol}
                 </Link>
               ) : (
-                "—"
+                "·"
               )}
             </td>
             <td className="px-4 py-3 tabular-nums text-dim-ink">
               {row.price === undefined
-                ? "—"
+                ? "·"
                 : row.price.toFixed(decimalsFor(row.price || 1))}
             </td>
             <td className="px-4 py-3 tabular-nums text-ink-on-ink">
@@ -409,7 +426,7 @@ const ActivityTable = ({ rows }: { rows: Activity[] }) => (
                     : "text-negative"
               }`}
             >
-              {row.pnl === undefined ? "—" : signed(row.pnl)}
+              {row.pnl === undefined ? "·" : signed(row.pnl)}
             </td>
             <td className="px-4 py-3 text-dim-ink">{when(row)}</td>
           </tr>

@@ -1,5 +1,4 @@
 import { Action } from "@/components/ui/action";
-import { Label } from "@/components/ui/label";
 import { Reveal } from "@/components/ui/reveal";
 import { Rule } from "@/components/ui/rule";
 import { TypeIn } from "@/components/ui/type-in";
@@ -9,14 +8,17 @@ import { SECTION_COUNT, sectionIndex, install } from "@/data/content";
 import { brand } from "@/lib/brand";
 
 /**
- * The demo, on a dotted ground, sliding in from the left.
+ * The demo: heading, one line of support, and the player.
  *
- * The frame is deliberately *not* centred in its panel: it sits low and
- * overhangs, which is what makes the dotted field read as a surface the frame
- * was dropped onto rather than a box it was placed in.
+ * **Why this is one centred column and not two.** The section used to put the
+ * frame in a half-width panel beside its text, which capped the video at a
+ * third of the screen and left the recording unreadable at the size anyone
+ * actually watches it. A demo is the one thing on the page that has to be big,
+ * so the text sits above it, centred and narrow enough to read, and the frame
+ * takes the full column beneath.
  *
- * The header is written out rather than using `SectionHead`: the reference puts
- * this section's heading on the right of its panel, not above it.
+ * The heading is written out rather than using `SectionHead`, which stacks its
+ * parts to the left.
  */
 export const Install = () => (
   <Section id={install.head.id} tone="paper">
@@ -37,40 +39,41 @@ export const Install = () => (
       <Rule className="flex-1 bg-rule-paper" delay={160} />
     </Reveal>
 
-    <div className="mt-14 grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-      <div className="dotfield-panel relative flex min-h-[24rem] items-end overflow-hidden border border-rule-paper p-8 sm:p-10">
-        <Reveal
-          x={-56}
-          y={0}
-          delay={140}
-          config={{ tension: 150, friction: 30 }}
-          className="w-full"
-        >
-          <div className="w-full translate-y-6">
-            <VideoFrame />
-          </div>
-        </Reveal>
-      </div>
-
-      <div className="flex flex-col items-start gap-8">
+    <div className="mx-auto mt-14 flex w-full max-w-[72rem] flex-col items-center gap-10">
+      <div className="flex flex-col items-center gap-6 text-center">
         <Reveal y={24}>
-          <h2 className="max-w-[18ch] text-[2.25rem] font-medium leading-[1.05] tracking-tight sm:text-[3rem]">
-            {install.head.heading[0]}
-            <br />
+          <h2 className="max-w-[20ch] text-[2.25rem] font-medium leading-[1.05] tracking-tight sm:text-[3rem]">
+            {install.head.heading[0]}{" "}
             <span className="text-dim-paper">{install.head.heading[1]}</span>
           </h2>
         </Reveal>
 
         <Reveal y={24} delay={90}>
-          <p className="max-w-[44ch] text-sm leading-relaxed text-dim-paper">
+          <p className="max-w-[52ch] text-sm leading-relaxed text-dim-paper">
             {install.note}
           </p>
         </Reveal>
-
-        <Reveal y={24} delay={150}>
-          <Action href={brand.links.app}>{install.head.action}</Action>
-        </Reveal>
       </div>
+
+      {/*
+        The dotted ground stays, but as a mount the frame sits centred on
+        rather than a box it overhangs. The padding is what keeps the field
+        visible as a surface at this width.
+      */}
+      <Reveal
+        y={28}
+        delay={140}
+        config={{ tension: 150, friction: 30 }}
+        className="w-full"
+      >
+        <div className="dotfield-panel border border-rule-paper p-4 sm:p-8">
+          <VideoFrame />
+        </div>
+      </Reveal>
+
+      <Reveal y={24} delay={200}>
+        <Action href={brand.links.app}>{install.head.action}</Action>
+      </Reveal>
     </div>
   </Section>
 );

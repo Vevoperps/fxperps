@@ -61,4 +61,4 @@ export const decimalsFor = (mark: number): number =>
   mark >= 1000 ? 2 : mark >= 10 ? 3 : 4;
 
 export const formatChange = (change: number, known = true): string =>
-  known ? `${change > 0 ? "+" : ""}${(change * 100).toFixed(2)}%` : "—";
+  known ? `${change > 0 ? "+" : ""}${(change * 100).toFixed(2)}%` : "·";

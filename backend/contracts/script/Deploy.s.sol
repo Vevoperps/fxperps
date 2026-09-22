@@ -34,6 +34,9 @@ import {MarketTable} from "./MarketTable.sol";
  *     --rpc-url https://sepolia-rollup.arbitrum.io/rpc --broadcast
  */
 contract Deploy is Script {
+    /// @dev Robinhood Chain. Named so the refusal below reads as a decision.
+    uint256 private constant MAINNET = 4663;
+
     /**
      * @dev An address from the environment, where "absent" and "present but
      * blank" mean the same thing.
@@ -87,6 +90,13 @@ contract Deploy is Script {
         vm.startBroadcast(key);
 
         if (usdgAddress == address(0)) {
+            // A loud log is enough on a testnet, where a mock token that
+            // anybody can mint is the point. On mainnet it is the single
+            // mistake that ends the venue in one transaction: `MockUSDG.mint`
+            // takes any address and any amount, so a blank line in `.env`
+            // hands the pool to whoever notices first. This refuses instead.
+            require(block.chainid != MAINNET, "Deploy: USDG_ADDRESS is required on mainnet");
+
             usdgAddress = address(new MockUSDG());
             console2.log("!! MOCK settlement token deployed. Testnet only.", usdgAddress);
         }
