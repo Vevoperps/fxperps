@@ -5,9 +5,8 @@ import { brand } from "@/lib/brand";
  *
  * The name used to come straight from `brand.chain`, which is the chain this
  * venue is *for* — and that was wrong the moment the first deployment went
- * somewhere else. A banner reading "live on robinhood chain" over an Arbitrum
- * Sepolia deployment is not a cosmetic slip: it is the app telling a visitor
- * which chain their money is on, incorrectly.
+ * somewhere else. A banner naming the wrong chain is not a cosmetic slip: it
+ * is the app telling a visitor which chain their money is on, incorrectly.
  *
  * So the name is derived from the configured id, and an id nobody has named
  * prints as the number rather than as a guess.
@@ -23,12 +22,9 @@ export interface Network {
 
 const KNOWN: Record<number, Network> = {
   1: { name: "Ethereum", testnet: false, explorer: "https://etherscan.io" },
-  42161: { name: "Arbitrum One", testnet: false, explorer: "https://arbiscan.io" },
-  8453: { name: "Base", testnet: false, explorer: "https://basescan.org" },
 
-  // Robinhood Chain, an Arbitrum Orbit rollup. Both ids are named because the
-  // testnet is where this deployment gets proved, and a page that cannot tell
-  // the two apart is a page that cannot warn anybody which one they are on.
+  // The venue's own chain, both ids. A page that cannot tell the live one from
+  // the test one is a page that cannot warn anybody which it is showing them.
   4663: {
     name: "Robinhood Chain",
     testnet: false,
@@ -39,14 +35,6 @@ const KNOWN: Record<number, Network> = {
     testnet: true,
     explorer: "https://explorer.testnet.chain.robinhood.com",
   },
-
-  11155111: { name: "Sepolia", testnet: true, explorer: "https://sepolia.etherscan.io" },
-  421614: {
-    name: "Arbitrum Sepolia",
-    testnet: true,
-    explorer: "https://sepolia.arbiscan.io",
-  },
-  84532: { name: "Base Sepolia", testnet: true, explorer: "https://sepolia.basescan.org" },
 
   31337: { name: "a local development chain", testnet: true, explorer: null },
   1337: { name: "a local development chain", testnet: true, explorer: null },

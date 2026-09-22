@@ -29,7 +29,7 @@ const signerOrThrow = async () => {
 /**
  * What every transaction pays, decided here rather than by the wallet.
  *
- * **Why the app sets this at all.** On Arbitrum's rollups `eth_gasPrice` can
+ * **Why the app sets this at all.** On Orbit rollups `eth_gasPrice` can
  * answer with a number *below* the chain's own `baseFeePerGas`. A wallet that
  * trusts that answer — MetaMask does — builds a transaction the same node then
  * refuses, with `max fee per gas less than block base fee`. Nothing is wrong

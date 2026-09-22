@@ -3,59 +3,90 @@
 import { useState } from "react";
 
 import { Label } from "@/components/ui/label";
-import { TypeIn } from "@/components/ui/type-in";
 import { app } from "@/data/app";
 import { brand } from "@/lib/brand";
 import { venue } from "@/lib/chain/venue";
 import { PreviewBanner } from "@/views/app/app-shell";
+import { GridField } from "@/views/home/grid-field";
 
 /**
- * The token screen: what $VEVO is, and the one thing it will do.
+ * The token screen.
+ *
+ * **Why it opens with a band rather than a card.** Every other screen in the
+ * app is a working instrument: a table, a ticket, a balance. This one has to
+ * make an argument, and an argument that opens with a bordered box reads as a
+ * settings page. So the ticker is set at display size over the same live grid
+ * the landing's hero and footer use, and the facts sit under it as chips.
  *
  * **Nothing here is live, and the screen says so in each place rather than
  * once at the top.** The staking vault is not deployed, so the inputs accept
- * typing and the buttons refuse, with the reason printed beside them. A screen
- * that looked live and reverted on signature would be worse than one that is
- * honest about being early.
+ * typing and the actions refuse, with the reason beside them. A screen that
+ * looked live and reverted on signature would be worse than one that is honest
+ * about being early.
  *
  * **Every number is a slot.** Supply, the distribution split and the stake a
  * tier asks for are decisions nobody has made. They read `tba` until they are
- * real, because a plausible figure printed on a token page is a claim, and a
- * claim that has to be retracted is how a project loses the room.
- *
- * What is settled is stated plainly: fees flow to stakers, and margin stays in
- * the dollar stablecoin. The last block on the page explains why, since it is
- * the question every holder asks first.
+ * real, because a plausible figure on a token page is a claim, and a claim that
+ * has to be retracted is how a project loses the room. The distribution bar is
+ * drawn in that state too: striped, so the shape of the answer is visible
+ * without inventing one.
  */
 
 const { vevo } = app;
 
 /** A figure, or the mark that says it does not exist yet. */
-const Figure = ({ value }: { value: string | null }) =>
+const Figure = ({
+  value,
+  large = false,
+}: {
+  value: string | null;
+  large?: boolean;
+}) =>
   value ? (
-    <b className="font-mono text-lg font-medium tabular-nums">{value}</b>
+    <b
+      className={`font-mono font-medium tabular-nums ${large ? "text-[2rem] leading-none" : "text-lg"}`}
+    >
+      {value}
+    </b>
   ) : (
-    <span className="font-mono text-lg text-faint uppercase">{vevo.tba}</span>
+    <span
+      className={`font-mono text-faint uppercase ${large ? "text-[1.25rem]" : "text-lg"}`}
+    >
+      {vevo.tba}
+    </span>
   );
 
-const Panel = ({
+const Block = ({
+  n,
   title,
   children,
+  className = "",
 }: {
+  n: string;
   title: string;
   children: React.ReactNode;
+  className?: string;
 }) => (
-  <section className="flex flex-col gap-5 border border-rule-ink p-6 sm:p-8">
-    <Label tone="ink" strong>
-      {title}
-    </Label>
+  <section
+    className={`flex flex-col gap-6 border border-rule-ink bg-surface-ink p-6 sm:p-8 ${className}`}
+  >
+    <div className="flex items-center gap-3">
+      <span aria-hidden className="label bg-accent px-2 py-1.5 pt-2 text-ink-on-ink">
+        {n}
+      </span>
+      <Label tone="ink" strong>
+        {title}
+      </Label>
+      <span aria-hidden className="h-px flex-1 bg-rule-ink" />
+    </div>
     {children}
   </section>
 );
 
 /** The soft state every action on this page is in. */
 const NotYet = ({ reason }: { reason: string }) => (
-  <p className="border-l-2 border-rule-ink bg-surface-ink-2 px-4 py-3">
+  <p className="flex items-center gap-3 border-l-2 border-accent bg-surface-ink-2 px-4 py-3">
+    <span aria-hidden className="size-2 shrink-0 bg-accent" />
     <Label tone="ink">{reason}</Label>
   </p>
 );
@@ -65,6 +96,7 @@ export const AppVevo = () => {
   const [copied, setCopied] = useState(false);
 
   const address = brand.token.address;
+  const ticker = brand.token.ticker;
 
   const copy = () => {
     if (!address) return;
@@ -78,132 +110,152 @@ export const AppVevo = () => {
     <>
       <PreviewBanner />
 
-      <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-10 px-5 py-12 sm:px-8">
-        <header className="flex flex-col gap-4">
-          <span className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="label bg-accent px-2 py-1.5 pt-2 text-ink-on-ink"
-            >
-              05
-            </span>
-            <Label tone="ink">{vevo.title}</Label>
-          </span>
+      {/* The band. Full bleed, live grid, the ticker at display size. */}
+      <div className="relative mt-6 overflow-hidden border-y border-rule-ink bg-surface-ink-2">
+        <GridField className="absolute inset-0 size-full opacity-70" />
 
-          <h1 className="text-[1.75rem] font-medium leading-[1.1] tracking-tight sm:text-[2.25rem]">
-            <TypeIn block text={vevo.heading[0]} delay={120} />
-            <TypeIn
-              block
-              text={vevo.heading[1]}
-              delay={120 + vevo.heading[0].length * 17}
-              className="text-dim-ink"
-            />
+        <div className="relative mx-auto flex w-full max-w-[90rem] flex-col gap-8 px-5 py-16 sm:px-8 sm:py-24">
+          <h1 className="text-[clamp(4rem,18vw,13rem)] leading-[0.82] font-medium tracking-[-0.04em]">
+            <span className="text-accent">$</span>
+            {ticker}
           </h1>
 
-          <p className="max-w-[60ch] text-sm leading-relaxed text-dim-ink">
+          <p className="max-w-[56ch] text-sm leading-relaxed text-dim-ink">
             {vevo.lede}
           </p>
-        </header>
 
-        <div className="grid gap-px bg-rule-ink lg:grid-cols-2">
-          {/* The token itself. */}
-          <div className="bg-surface-ink">
-            <Panel title={vevo.facts.title}>
-              <dl className="flex flex-col gap-4">
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt>
-                    <Label tone="ink">{vevo.facts.ticker}</Label>
-                  </dt>
-                  <dd>
-                    <Figure value={`$${brand.token.ticker}`} />
-                  </dd>
-                </div>
+          <dl className="flex flex-wrap gap-px bg-rule-ink">
+            {(
+              [
+                [vevo.facts.ticker, `$${ticker}`],
+                [vevo.facts.chain, venue.network.name],
+                [vevo.facts.supply, vevo.facts.supplyValue],
+              ] as const
+            ).map(([label, value]) => (
+              <div
+                key={label}
+                className="flex min-w-[10rem] flex-1 flex-col gap-2 bg-surface-ink-2 px-5 py-4"
+              >
+                <dt>
+                  <Label tone="ink">{label}</Label>
+                </dt>
+                <dd>
+                  <Figure value={value} />
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
 
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt>
-                    <Label tone="ink">{vevo.facts.chain}</Label>
-                  </dt>
-                  <dd>
-                    <Figure value={venue.network.name} />
-                  </dd>
-                </div>
+      <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-px bg-rule-ink px-5 py-12 sm:px-8">
+        <div className="flex flex-col gap-px bg-rule-ink lg:grid lg:grid-cols-3">
+          {/* Where a fee goes. The argument, drawn. */}
+          <Block n="01" title={vevo.flow.title} className="lg:col-span-2">
+            <ol className="grid gap-px bg-rule-ink sm:grid-cols-3">
+              {vevo.flow.steps.map((step) => (
+                <li
+                  key={step.n}
+                  className="flex flex-col gap-3 bg-surface-ink-2 p-5"
+                >
+                  <span className="font-mono text-[2rem] leading-none text-accent">
+                    {step.n}
+                  </span>
+                  <Label tone="ink" strong>
+                    {step.label}
+                  </Label>
+                  <p className="text-xs leading-relaxed text-dim-ink">
+                    {step.body}
+                  </p>
+                </li>
+              ))}
+            </ol>
+            <p className="text-xs text-faint">{vevo.flow.split}</p>
+          </Block>
 
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt>
-                    <Label tone="ink">{vevo.facts.supply}</Label>
-                  </dt>
-                  <dd>
-                    <Figure value={vevo.facts.supplyValue} />
-                  </dd>
-                </div>
-
-                <div className="flex flex-col gap-2 border-t border-rule-ink pt-4">
-                  <dt>
-                    <Label tone="ink">{vevo.facts.contract}</Label>
-                  </dt>
-                  <dd className="flex flex-wrap items-center gap-3">
-                    {address ? (
-                      <>
-                        <code className="break-all font-mono text-xs text-ink-on-ink">
-                          {address}
-                        </code>
-                        <button
-                          type="button"
-                          onClick={copy}
-                          className="label border border-rule-ink px-3 py-2 text-dim-ink transition-colors duration-[var(--duration-fast)] ease-entrance hover:border-accent hover:text-accent"
-                        >
-                          {copied ? vevo.facts.copied : vevo.facts.copy}
-                        </button>
-                        {venue.network.explorer ? (
-                          <a
-                            href={`${venue.network.explorer}/address/${address}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="label text-accent underline-offset-4 hover:underline"
-                          >
-                            {vevo.facts.explorer}
-                          </a>
-                        ) : null}
-                      </>
-                    ) : (
-                      <span className="font-mono text-xs text-faint uppercase">
-                        {vevo.facts.contractSoon}
-                      </span>
-                    )}
-                  </dd>
-                </div>
-              </dl>
-            </Panel>
-          </div>
-
-          {/* How the supply is split. */}
-          <div className="bg-surface-ink">
-            <Panel title={vevo.distribution.title}>
-              <dl className="flex flex-col gap-4">
-                {vevo.distribution.rows.map((row) => (
-                  <div
-                    key={row.label}
-                    className="flex items-baseline justify-between gap-4"
+          {/* The contract. */}
+          <Block n="02" title={vevo.facts.contract}>
+            {address ? (
+              <div className="flex flex-col gap-4">
+                <code className="break-all border border-rule-ink bg-surface-ink-2 p-4 font-mono text-xs leading-relaxed">
+                  {address}
+                </code>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={copy}
+                    className="label border border-rule-ink px-4 py-2.5 text-dim-ink transition-colors duration-[var(--duration-fast)] ease-entrance hover:border-accent hover:text-accent"
                   >
-                    <dt>
-                      <Label tone="ink">{row.label}</Label>
-                    </dt>
-                    <dd>
-                      <Figure value={row.share === null ? null : `${row.share}%`} />
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-              <p className="text-xs leading-relaxed text-faint">
-                {vevo.distribution.note}
-              </p>
-            </Panel>
-          </div>
+                    {copied ? vevo.facts.copied : vevo.facts.copy}
+                  </button>
+                  {venue.network.explorer ? (
+                    <a
+                      href={`${venue.network.explorer}/address/${address}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="label border border-rule-ink px-4 py-2.5 text-accent transition-colors duration-[var(--duration-fast)] ease-entrance hover:bg-accent hover:text-ink-on-ink"
+                    >
+                      {vevo.facts.explorer}
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-col justify-center gap-4">
+                <span
+                  aria-hidden
+                  className="dotfield h-24 w-full border border-rule-ink text-dim-ink"
+                />
+                <Label tone="ink">{vevo.facts.contractSoon}</Label>
+              </div>
+            )}
+          </Block>
         </div>
 
-        {/* Staking. The whole point of the token. */}
-        <Panel title={vevo.staking.title}>
-          <p className="max-w-[68ch] text-sm leading-relaxed text-dim-ink">
+        {/* Distribution, as a bar rather than a list of percentages. */}
+        <Block n="03" title={vevo.distribution.title}>
+          <div
+            aria-hidden
+            className="flex h-14 w-full overflow-hidden border border-rule-ink"
+          >
+            {vevo.distribution.rows.map((row, index) => (
+              <span
+                key={row.label}
+                style={{
+                  flexGrow: row.share ?? 1,
+                  // No split decided, so the bar shows four equal unknowns
+                  // rather than a shape somebody could read as the answer.
+                  opacity: row.share === null ? 0.25 + index * 0.08 : 1,
+                }}
+                className={`border-r border-rule-ink last:border-r-0 ${
+                  row.share === null ? "dotfield bg-surface-ink-2" : "bg-accent"
+                }`}
+              />
+            ))}
+          </div>
+
+          <dl className="grid gap-px bg-rule-ink sm:grid-cols-2 lg:grid-cols-4">
+            {vevo.distribution.rows.map((row) => (
+              <div
+                key={row.label}
+                className="flex flex-col gap-2 bg-surface-ink-2 px-5 py-4"
+              >
+                <dt>
+                  <Label tone="ink">{row.label}</Label>
+                </dt>
+                <dd>
+                  <Figure value={row.share === null ? null : `${row.share}%`} />
+                </dd>
+              </div>
+            ))}
+          </dl>
+
+          <p className="text-xs text-faint">{vevo.distribution.note}</p>
+        </Block>
+
+        {/* Staking. */}
+        <Block n="04" title={vevo.staking.title}>
+          <p className="max-w-[72ch] text-sm leading-relaxed text-dim-ink">
             {vevo.staking.lede}
           </p>
 
@@ -217,10 +269,10 @@ export const AppVevo = () => {
             ).map(([label, value]) => (
               <div
                 key={label}
-                className="flex flex-col gap-1.5 bg-surface-ink p-5"
+                className="flex flex-col gap-2 bg-surface-ink-2 p-6"
               >
                 <Label tone="ink">{label}</Label>
-                <Figure value={value} />
+                <Figure value={value} large />
               </div>
             ))}
           </div>
@@ -236,14 +288,14 @@ export const AppVevo = () => {
                   setAmount(event.target.value.replace(/[^0-9.]/g, ""))
                 }
                 aria-label={vevo.staking.stakeLabel}
-                className="min-w-[10rem] flex-1 border border-rule-ink bg-surface-ink-2 px-4 py-3 font-mono text-sm tabular-nums text-dim-ink placeholder:text-faint"
+                className="min-w-[12rem] flex-1 border border-rule-ink bg-surface-ink-2 px-4 py-3.5 font-mono text-sm tabular-nums text-ink-on-ink outline-none transition-colors duration-[var(--duration-fast)] ease-entrance placeholder:text-faint focus:border-accent"
               />
               {[vevo.staking.stake, vevo.staking.unstake, vevo.staking.claim].map(
                 (action) => (
                   <span
                     key={action}
                     title={vevo.staking.soon}
-                    className="label cursor-not-allowed border border-rule-ink px-4 py-3 text-faint"
+                    className="label cursor-not-allowed border border-rule-ink px-4 py-3.5 text-faint"
                   >
                     {action}
                   </span>
@@ -253,62 +305,57 @@ export const AppVevo = () => {
           </div>
 
           <NotYet reason={vevo.staking.soon} />
-
-          <p className="max-w-[68ch] text-xs leading-relaxed text-faint">
+          <p className="max-w-[72ch] text-xs leading-relaxed text-faint">
             {vevo.staking.why}
           </p>
-        </Panel>
+        </Block>
 
-        {/* Fee tiers. */}
-        <Panel title={vevo.tiers.title}>
-          <p className="max-w-[68ch] text-sm leading-relaxed text-dim-ink">
+        {/* The ladder. Each rung wider than the last, so the shape is the point. */}
+        <Block n="05" title={vevo.tiers.title}>
+          <p className="max-w-[72ch] text-sm leading-relaxed text-dim-ink">
             {vevo.tiers.lede}
           </p>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[32rem] border-collapse">
-              <thead>
-                <tr className="border-b border-rule-ink">
-                  {[
-                    vevo.tiers.columns.tier,
-                    vevo.tiers.columns.stake,
-                    vevo.tiers.columns.fee,
-                  ].map((column) => (
-                    <th key={column} className="px-4 py-3 text-left">
-                      <Label tone="ink">{column}</Label>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {vevo.tiers.rows.map((row) => (
-                  <tr key={row.tier} className="border-b border-rule-ink">
-                    <td className="px-4 py-4">
-                      <Label tone="ink" strong>
-                        {row.tier}
-                      </Label>
-                    </td>
-                    <td className="px-4 py-4">
-                      <Figure value={row.stake} />
-                    </td>
-                    <td className="px-4 py-4">
-                      <Figure value={row.fee} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className="flex flex-col gap-px bg-rule-ink">
+            {vevo.tiers.rows.map((row, index) => (
+              <li
+                key={row.tier}
+                className="relative flex flex-wrap items-center justify-between gap-4 bg-surface-ink-2 px-5 py-5"
+              >
+                <span
+                  aria-hidden
+                  style={{ width: `${18 + index * 22}%` }}
+                  className="absolute inset-y-0 left-0 bg-accent/10"
+                />
+                <span className="relative flex items-center gap-4">
+                  <span aria-hidden className="size-2 bg-accent" />
+                  <Label tone="ink" strong>
+                    {row.tier}
+                  </Label>
+                </span>
+                <span className="relative flex items-baseline gap-8">
+                  <span className="flex flex-col gap-1">
+                    <Label tone="ink">{vevo.tiers.columns.stake}</Label>
+                    <Figure value={row.stake} />
+                  </span>
+                  <span className="flex flex-col gap-1">
+                    <Label tone="ink">{vevo.tiers.columns.fee}</Label>
+                    <Figure value={row.fee} />
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
 
           <NotYet reason={vevo.tiers.soon} />
-        </Panel>
+        </Block>
 
         {/* The question every holder asks. */}
-        <Panel title={vevo.honesty.title}>
-          <p className="max-w-[72ch] text-sm leading-relaxed text-dim-ink">
+        <Block n="06" title={vevo.honesty.title}>
+          <p className="max-w-[76ch] text-sm leading-relaxed text-dim-ink">
             {vevo.honesty.body}
           </p>
-        </Panel>
+        </Block>
       </div>
     </>
   );

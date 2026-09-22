@@ -405,6 +405,35 @@ export const app = {
       soon: "Tiers open with the staking vault",
     },
 
+    /**
+     * Where a trade's fee ends up, as three steps.
+     *
+     * The value of the token is one sentence long and every holder asks it, so
+     * it is drawn rather than written: a fill pays, the pool keeps its share,
+     * the stakers take theirs. Three blocks beat three paragraphs.
+     */
+    flow: {
+      title: "Where a fee goes",
+      steps: [
+        {
+          n: "01",
+          label: "A fill",
+          body: "every open and every close pays 0.05% of notional.",
+        },
+        {
+          n: "02",
+          label: "The pool",
+          body: "the side that took the other end of the trade keeps its share.",
+        },
+        {
+          n: "03",
+          label: "Stakers",
+          body: `the rest accrues to staked ${brand.token.ticker}, claimable in ${brand.chain.settlement}.`,
+        },
+      ],
+      split: "the exact split is set before launch and published here.",
+    },
+
     honesty: {
       title: `Why margin is not ${brand.token.ticker}`,
       body: `a position is a bet on a currency, not on us. if margin were held in ${brand.token.ticker}, a trader could read the yen correctly and still be liquidated because the token moved against them overnight. so collateral and payouts stay in ${brand.chain.settlement}, and ${brand.token.ticker} earns from the venue instead of standing inside it.`,
