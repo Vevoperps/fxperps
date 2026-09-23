@@ -4,11 +4,14 @@
  * X, Telegram and Discord: the feed, the announcement channel and the room.
  * The repository is deliberately not among them.
  *
- * They are simple geometric glyphs of our own rather than traced platform
- * logos — an X is two crossed strokes, a plane is a folded triangle, a room is
- * a rounded mask with two eyes — sized to the text beside them and inheriting
- * its colour, so they dim and light with the row instead of sitting on it as
- * foreign artwork. Two of the three have no account behind them yet; the footer
+ * They are drawn by hand rather than imported from a logo pack: sized to the
+ * text beside them, inheriting its colour, so they dim and light with the row
+ * instead of sitting on it as foreign artwork. Each is one path, and the two
+ * that have holes in them (the crossbar of the X, the eyes of the mask) cut
+ * those holes with `fill-rule="evenodd"` rather than stacking a background
+ * coloured shape on top, so they survive any background the footer takes.
+ *
+ * Two of the three have no account behind them yet; the footer
  * renders those dimmed and unclickable rather than hiding them, so the row
  * keeps its shape on the day the handles exist.
  */
@@ -49,7 +52,7 @@ export const SocialMark = ({ kind }: { kind: SocialKind }) => {
       <path
         fillRule="evenodd"
         clipRule="evenodd"
-        d="M8.2 4h7.6a6.2 6.2 0 0 1 6.2 6.2v3.6a6.2 6.2 0 0 1-6.2 6.2H8.2A6.2 6.2 0 0 1 2 13.8v-3.6A6.2 6.2 0 0 1 8.2 4Zm1 5.9a1.7 2.1 0 1 0 0 4.2 1.7 2.1 0 1 0 0-4.2Zm5.6 0a1.7 2.1 0 1 0 0 4.2 1.7 2.1 0 1 0 0-4.2Z"
+        d="M12 5.35 10.75 3.8C8.3 4.1 6.2 5 4.6 6.4 2.6 9.55 1.55 13.2 1.7 17c1.5 2 3.7 3.2 6.05 3.7l1.45-2.35c.85.25 1.8.37 2.8.37s1.95-.12 2.8-.37l1.45 2.35c2.35-.5 4.55-1.7 6.05-3.7.15-3.8-.9-7.45-2.9-10.6C17.8 5 15.7 4.1 13.25 3.8ZM8.9 10.05a1.95 2.3 0 1 0 0 4.6 1.95 2.3 0 1 0 0-4.6Zm6.2 0a1.95 2.3 0 1 0 0 4.6 1.95 2.3 0 1 0 0-4.6Z"
       />
     </svg>
   );
