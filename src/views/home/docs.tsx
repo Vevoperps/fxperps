@@ -96,8 +96,8 @@ export const Docs = () => (
 
               {/* The page, cropped by the card: it runs off the bottom edge, so
                   it reads as a document continuing rather than a thumbnail. */}
-              <div className="dotfield-panel relative h-[15rem] overflow-hidden border-y border-rule-paper px-5 pt-6">
-                <div className="h-[19rem] w-full border border-rule-paper shadow-[0_1rem_2rem_-1rem_rgba(0,0,0,0.25)] transition-transform duration-[var(--duration-slow)] ease-entrance group-hover:-translate-y-2">
+              <div className="dotfield-panel relative h-[17rem] overflow-hidden border-y border-rule-paper px-5 pt-6">
+                <div className="h-full w-full border border-rule-paper shadow-[0_1rem_2rem_-1rem_rgba(0,0,0,0.25)] transition-transform duration-[var(--duration-slow)] ease-entrance group-hover:-translate-y-2">
                   <DocPreview book={book.book} />
                 </div>
               </div>

@@ -58,10 +58,10 @@ export const SiteHeader = () => {
     }
     event.preventDefault();
     scrollTo(id);
-    // The address bar should still say where we are, but pushing a history
-    // entry per nav click would make the back button walk the page backwards
-    // one section at a time.
-    history.replaceState(null, "", `#${id}`);
+    // **No hash is written.** It used to be, so the address bar would name the
+    // section, and it cost the back button: the hash outlived the click, and
+    // every later return to this page honoured it instead of the position the
+    // reader actually left from.
   };
 
   return (
@@ -82,11 +82,22 @@ export const SiteHeader = () => {
                 on
                   ? "border-accent bg-accent text-ink-on-ink"
                   : "border-rule-paper text-accent hover:bg-surface-paper-2"
-              } px-3 py-2.5 transition-colors duration-[var(--duration-fast)] ease-entrance`}
+              } px-3.5 py-3.5 transition-colors duration-[var(--duration-fast)] ease-entrance`}
             >
-              {on ? <span className="mr-1 opacity-60">&lt;</span> : null}
+              {/*
+                Always rendered, hidden when inactive. Mounting the chevrons
+                only on the active item made it 17px wider than its neighbours,
+                so the whole row slid sideways every time the scroll changed
+                which section was current. Aim at a 43px-wide item, the page
+                starts moving, and the button walks out from under the cursor.
+              */}
+              <span aria-hidden className={`mr-1 ${on ? "opacity-60" : "invisible"}`}>
+                &lt;
+              </span>
               <HoverType text={item.label} />
-              {on ? <span className="ml-1 opacity-60">&gt;</span> : null}
+              <span aria-hidden className={`ml-1 ${on ? "opacity-60" : "invisible"}`}>
+                &gt;
+              </span>
             </a>
           );
         })}

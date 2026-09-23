@@ -148,14 +148,39 @@ function ScrollController() {
     const run = (action: () => void) =>
       requestAnimationFrame(() => requestAnimationFrame(action));
 
-    if (hash) {
-      run(() => scrollTo(hash, true));
-      return;
-    }
-
+    // **A return beats a hash.** The hash branch used to come first, and a
+    // stale `#section` left in the address bar therefore decided where every
+    // later visit to this route landed: leave the page from the country list,
+    // press back, arrive at whatever was last clicked in the nav. What the
+    // reader left is what the reader gets back.
     if (back) {
       const offset = recall(pathname);
-      run(() => lenis.scrollTo(offset, { immediate: true, force: true }));
+
+      // Restoring once is not enough on a page that is still assembling. The
+      // sections reveal on springs and the rates table fills from the network,
+      // so the document grows for a second after the route settles and a
+      // position applied at frame two ends up in the wrong place. Applying it
+      // again as the height changes costs nothing and lands it.
+      const land = () => {
+        const limit = Math.max(
+          0,
+          document.documentElement.scrollHeight - window.innerHeight,
+        );
+        lenis.scrollTo(Math.min(offset, limit), {
+          immediate: true,
+          force: true,
+        });
+      };
+
+      run(land);
+      const timers = [120, 320, 640].map((delay) =>
+        window.setTimeout(land, delay),
+      );
+      return () => timers.forEach(window.clearTimeout);
+    }
+
+    if (hash) {
+      run(() => scrollTo(hash, true));
       return;
     }
 

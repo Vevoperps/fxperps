@@ -111,11 +111,17 @@ export const AppVevo = () => {
       <PreviewBanner />
 
       {/* The band. Full bleed, live grid, the ticker at display size. */}
-      <div className="relative mt-6 overflow-hidden border-y border-rule-ink bg-surface-ink-2">
+      <div className="relative mt-6 flex min-h-[26rem] items-center overflow-hidden border-y border-rule-ink bg-surface-ink-2">
         <GridField className="absolute inset-0 size-full opacity-70" />
 
-        <div className="relative mx-auto flex w-full max-w-[90rem] flex-col gap-8 px-5 py-16 sm:px-8 sm:py-24">
-          <h1 className="text-[clamp(4rem,18vw,13rem)] leading-[0.82] font-medium tracking-[-0.04em]">
+        {/*
+          `pointer-events-none` on the whole column, restored on the parts that
+          are actually interactive. Without it the text swallows the pointer
+          and the grid behind it only lights in the gaps between words, which
+          is what "not all the squares light up" looks like.
+        */}
+        <div className="pointer-events-none relative mx-auto flex w-full max-w-[90rem] flex-col gap-8 px-5 py-16 sm:px-8 sm:py-24">
+          <h1 className="text-[clamp(3.25rem,13vw,9rem)] leading-[0.85] font-medium tracking-[-0.035em]">
             <span className="text-accent">$</span>
             {ticker}
           </h1>
@@ -124,7 +130,7 @@ export const AppVevo = () => {
             {vevo.lede}
           </p>
 
-          <dl className="flex flex-wrap gap-px bg-rule-ink">
+          <dl className="pointer-events-auto flex flex-wrap gap-px bg-rule-ink">
             {(
               [
                 [vevo.facts.ticker, `$${ticker}`],

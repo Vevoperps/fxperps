@@ -35,7 +35,7 @@ export const DocPreview = ({ book }: { book: Book }) => {
           {book.name}
         </span>
 
-        {book.nav.slice(0, 3).map((group, index) => (
+        {book.nav.slice(0, 5).map((group, index) => (
           <span key={group.group} className="flex flex-col gap-[3px]">
             <span className="block text-[4px] font-medium text-foreground">
               {index + 1}. {group.group}
@@ -55,7 +55,7 @@ export const DocPreview = ({ book }: { book: Book }) => {
       </span>
 
       {/* The page. */}
-      <span className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
+      <span className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-hidden p-3">
         <span className="flex items-center gap-1">
           <span className="bg-accent px-[3px] py-[2px] text-[3.5px] uppercase tracking-[0.18em] text-ink-on-ink">
             01
@@ -70,7 +70,12 @@ export const DocPreview = ({ book }: { book: Book }) => {
         </span>
         <span aria-hidden className="block h-[1.5px] w-5 bg-accent" />
 
-        {paragraphs.slice(0, 2).map((block, index) => (
+        {/*
+          Four, not two. The page is a fixed rectangle and two paragraphs left
+          its bottom third blank, so the thumbnail read as a document that had
+          failed to load rather than as one seen from far away.
+        */}
+        {paragraphs.slice(0, 4).map((block, index) => (
           <span
             key={index}
             className="block text-[4px] leading-[1.6] text-dim-paper"
@@ -99,7 +104,7 @@ export const DocPreview = ({ book }: { book: Book }) => {
 
         {list ? (
           <span className="mt-[2px] flex flex-col gap-[3px]">
-            {list.items?.slice(0, 3).map((item) => (
+            {list.items?.slice(0, 5).map((item) => (
               <span key={item.term} className="flex gap-[3px]">
                 <span
                   aria-hidden
