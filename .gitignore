@@ -40,3 +40,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# tooling that belongs to whoever is writing the code, not to the project
+.claude/
+.cursorrules
+AGENTS.md
+CLAUDE.md
+
+# the internal vault: working notes, decisions and half-finished thinking.
+# what is worth publishing is published, at vevoperps.com/docs
+obsidian/
+
+# host-specific
+.vercelignore
