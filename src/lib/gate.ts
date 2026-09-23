@@ -17,23 +17,28 @@
 export const GATE_COOKIE = "vp_gate";
 
 /**
- * The password, from the environment only.
+ * The code that opens the curtain.
  *
- * **There is deliberately no default.** A curtain whose key is written in the
- * source is not a curtain once the source is public, and this repository is —
- * so an unset `SITE_PASSWORD` means the gate is off rather than that it is
- * open to anyone who can read a file.
+ * The default below is in the source, and the repository is public, so anyone
+ * who reads it can walk in. That is the deal this gate makes on purpose: it is
+ * a "not ready yet" sign that keeps the site out of search results and off the
+ * screen of anyone who stumbles on the URL, not a lock. Nothing behind it is
+ * secret, and nothing that must stay secret should ever go behind it.
  *
- * Set it in the Vercel project's environment variables before the first
- * deploy. Changing it invalidates every cookie already issued, so everyone is
- * asked again, which is also how you revoke access.
+ * `SITE_PASSWORD` overrides it without a code change, which is how the code is
+ * rotated: setting it in the Vercel project invalidates every cookie already
+ * issued, so everyone is asked again.
+ *
+ * To take the curtain down entirely at launch, delete `src/proxy.ts`.
  */
+const DEFAULT_PASSWORD = "228322";
+
 export const gatePassword = (): string | null => {
   const value = process.env.SITE_PASSWORD?.trim();
-  return value ? value : null;
+  return value ? value : DEFAULT_PASSWORD;
 };
 
-/** False when no password is configured: the site is simply open. */
+/** Always true while a default exists. Kept so callers read the same way. */
 export const gateEnabled = (): boolean => gatePassword() !== null;
 
 /**
