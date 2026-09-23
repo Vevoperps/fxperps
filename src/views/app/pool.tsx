@@ -169,10 +169,17 @@ export const AppPool = () => {
               <Label tone="ink">
                 {app.pool.removeLabel(money(pool?.value ?? 0))}
               </Label>
+              {/*
+                Dead until there is something to redeem. An account holding no
+                shares cannot take anything out, and a field that accepts a
+                number and then fails is worse than one that never invited it:
+                the wallet opens, the node refuses, and the refusal arrives as
+                whatever the wallet chose to call it.
+              */}
               <Row
                 value={redeem}
                 onChange={setRedeem}
-                live={live}
+                live={live && BigInt(pool?.shares ?? "0") > 0n}
                 busy={busy !== null}
                 action={app.pool.remove}
                 working={busy === "redeem"}

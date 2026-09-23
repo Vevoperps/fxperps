@@ -50,6 +50,17 @@ export const money = (value: number): string =>
     maximumFractionDigits: 2,
   });
 
-/** The same, signed, for a result that can go either way. */
-export const signed = (value: number): string =>
-  `${value >= 0 ? "+" : "−"}${money(Math.abs(value))}`;
+/**
+ * The same, signed, for a result that can go either way.
+ *
+ * An amount that rounds away to nothing loses its sign. Funding on a small
+ * position is a fraction of a cent, and printing it as `−0.00` reads as a
+ * broken number rather than as a negligible one: a minus sign in front of
+ * zero is a contradiction the eye catches before the brain. Below half a
+ * cent there is no direction left to report, so none is printed.
+ */
+export const signed = (value: number): string => {
+  const magnitude = money(Math.abs(value));
+  if (Math.abs(value) < 0.005) return magnitude;
+  return `${value >= 0 ? "+" : "−"}${magnitude}`;
+};

@@ -7,6 +7,7 @@ import {
 } from "ethers";
 
 import { FAUCET_ABI, PERP_ENGINE_ABI, SETTLEMENT_ABI } from "./abi";
+import { reader } from "./read";
 import { marketId } from "./units";
 import { venue } from "./venue";
 import { getSigner } from "./wallet";
@@ -125,6 +126,38 @@ interface Faucet {
   ): Promise<ContractTransactionResponse>;
 }
 
+/**
+ * Runs a call against the chain before the wallet is asked to sign it.
+ *
+ * **Why the app simulates at all.** A write that is going to revert reverts
+ * twice: once in the wallet's own gas estimate, and once on the node. What the
+ * user sees of that is whatever the wallet chooses to surface, and MetaMask
+ * flattens a revert it cannot parse into `Internal JSON-RPC error` — six words
+ * that name neither the cause nor the fix. Worse, it shows them *after* the
+ * signing dialog has opened, so a doomed transaction still costs a click and a
+ * moment of believing it might work.
+ *
+ * So every write is dry-run here first, through the app's own provider rather
+ * than the wallet's. `eth_call` returns the revert data intact, ethers decodes
+ * it against the ABI — which carries every custom error the engine can throw —
+ * and the name lands in `error.revert.name`, where `REASONS` turns it into a
+ * sentence. The wallet is only opened for a transaction that has already
+ * succeeded once against the current state.
+ *
+ * It is a simulation, not a guarantee: the state can move between the call and
+ * the signature. That is the narrow case the revert decoding still covers.
+ */
+const preflight = async (name: string, args: unknown[]): Promise<void> => {
+  const from = await (await signerOrThrow()).getAddress();
+  const engine = new Contract(
+    venue.engine as string,
+    PERP_ENGINE_ABI as unknown as string[],
+    reader(),
+  );
+
+  await engine.getFunction(name).staticCall(...args, { from });
+};
+
 const writeEngine = async (): Promise<WritableEngine> =>
   new Contract(
     venue.engine as string,
@@ -166,6 +199,7 @@ export const approveIfNeeded = async (amount: bigint): Promise<void> => {
 
 export const deposit = async (amount: bigint): Promise<void> => {
   await approveIfNeeded(amount);
+  await preflight("deposit", [amount]);
   const transaction = await (await writeEngine()).deposit(amount, await fees());
   await transaction.wait();
 };
@@ -179,6 +213,7 @@ export const deposit = async (amount: bigint): Promise<void> => {
  */
 export const addLiquidity = async (amount: bigint): Promise<void> => {
   await approveIfNeeded(amount);
+  await preflight("addLiquidity", [amount]);
   const transaction = await (
     await writeEngine()
   ).addLiquidity(amount, await fees());
@@ -187,6 +222,7 @@ export const addLiquidity = async (amount: bigint): Promise<void> => {
 
 /** Redeem shares. Only the part of the pool no open position has reserved. */
 export const removeLiquidity = async (shares: bigint): Promise<void> => {
+  await preflight("removeLiquidity", [shares]);
   const transaction = await (
     await writeEngine()
   ).removeLiquidity(shares, await fees());
@@ -194,6 +230,7 @@ export const removeLiquidity = async (shares: bigint): Promise<void> => {
 };
 
 export const withdraw = async (amount: bigint): Promise<void> => {
+  await preflight("withdraw", [amount]);
   const transaction = await (
     await writeEngine()
   ).withdraw(amount, await fees());
@@ -206,6 +243,12 @@ export const openPosition = async (
   margin: bigint,
   leverage: number,
 ): Promise<void> => {
+  await preflight("openPosition", [
+    marketId(symbol),
+    isLong,
+    margin,
+    BigInt(leverage),
+  ]);
   const transaction = await (
     await writeEngine()
   ).openPosition(
@@ -219,6 +262,7 @@ export const openPosition = async (
 };
 
 export const closePosition = async (symbol: string): Promise<void> => {
+  await preflight("closePosition", [marketId(symbol)]);
   const transaction = await (
     await writeEngine()
   ).closePosition(marketId(symbol), await fees());
@@ -229,6 +273,7 @@ export const reducePosition = async (
   symbol: string,
   notional: bigint,
 ): Promise<void> => {
+  await preflight("reducePosition", [marketId(symbol), notional]);
   const transaction = await (
     await writeEngine()
   ).reducePosition(marketId(symbol), notional, await fees());
@@ -239,6 +284,8 @@ export const addMargin = async (
   symbol: string,
   amount: bigint,
 ): Promise<void> => {
+  await approveIfNeeded(amount);
+  await preflight("addMargin", [marketId(symbol), amount]);
   const transaction = await (
     await writeEngine()
   ).addMargin(marketId(symbol), amount, await fees());
@@ -300,6 +347,8 @@ const REASONS: Record<string, string> = {
  * which describes ethers' difficulty and not the user's.
  */
 interface ErrorShape {
+  /** Ethers decodes a custom error here when the ABI declares it. */
+  revert?: { name?: string };
   shortMessage?: string;
   reason?: string;
   message?: string;
@@ -311,6 +360,7 @@ interface ErrorShape {
 const causes = (error: unknown): string[] => {
   const shape = (error ?? {}) as ErrorShape;
   return [
+    shape.revert?.name,
     shape.info?.error?.message,
     shape.error?.message,
     shape.data?.message,

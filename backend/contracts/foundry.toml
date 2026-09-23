@@ -37,6 +37,15 @@ int_types = "long"
 robinhood = "${RPC_URL}"
 robinhood_testnet = "https://rpc.testnet.chain.robinhood.com"
 
-[etherscan]
-robinhood = {key = "${EXPLORER_API_KEY}", url = "${EXPLORER_API_URL}", chain = 4663}
-robinhood_testnet = {key = "${EXPLORER_API_KEY}", url = "https://explorer.testnet.chain.robinhood.com/api", chain = 46630}
+# Blockscout for this chain sits behind Cloudflare's managed challenge, and
+# every script run made forge ask it for source code to prettify a trace. It
+# got a "Just a moment..." HTML page back and printed the whole page as an
+# ERROR, several times per run. Nothing was broken by it, which is exactly the
+# danger: a real failure would have been buried under two screens of Cloudflare
+# markup. Verification through that endpoint does not work for the same reason,
+# so the section buys nothing and is left commented rather than deleted, ready
+# for the day the explorer answers a robot.
+#
+# [etherscan]
+# robinhood = {key = "${EXPLORER_API_KEY}", url = "${EXPLORER_API_URL}", chain = 4663}
+# robinhood_testnet = {key = "${EXPLORER_API_KEY}", url = "https://explorer.testnet.chain.robinhood.com/api", chain = 46630}
