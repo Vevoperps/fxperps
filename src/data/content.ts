@@ -530,10 +530,20 @@ export const footer = {
   ],
 
   followLabel: "Follow",
-  /** Two marks only. See `components/ui/social-mark.tsx` for why. */
+  /**
+   * Three marks, and no repository. The source stays findable for anyone who
+   * goes looking, but a link in the footer invites every visitor to read the
+   * commit history, and a commit history is a different document from a
+   * product.
+   *
+   * Telegram and Discord have no accounts behind them yet. They are rendered
+   * anyway, dimmed and unclickable, because the row should not change shape on
+   * the day the handles are filled in.
+   */
   follow: [
     { kind: "x" as const, name: "X", key: "x" as const },
-    { kind: "github" as const, name: "GitHub", key: "docs" as const },
+    { kind: "telegram" as const, name: "Telegram", key: "telegram" as const },
+    { kind: "discord" as const, name: "Discord", key: "discord" as const },
   ],
 
   legal: {

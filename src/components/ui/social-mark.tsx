@@ -1,17 +1,19 @@
 /**
- * The two social marks the footer carries, drawn rather than imported.
+ * The three social marks the footer carries, drawn rather than imported.
  *
- * Only X and GitHub: a row of six platform icons is a row of six logos nobody
- * clicks, and the two that a trading venue is actually judged on are the feed
- * and the code.
+ * X, Telegram and Discord: the feed, the announcement channel and the room.
+ * The repository is deliberately not among them.
  *
- * They are simple geometric glyphs of our own — an X is two crossed strokes and
- * the GitHub mark is a rounded silhouette — sized to the text beside them and
- * inheriting its colour, so they dim and light with the row instead of sitting
- * on it as foreign artwork.
+ * They are simple geometric glyphs of our own rather than traced platform
+ * logos — an X is two crossed strokes, a plane is a folded triangle, a room is
+ * a rounded mask with two eyes — sized to the text beside them and inheriting
+ * its colour, so they dim and light with the row instead of sitting on it as
+ * foreign artwork. Two of the three have no account behind them yet; the footer
+ * renders those dimmed and unclickable rather than hiding them, so the row
+ * keeps its shape on the day the handles exist.
  */
 
-export type SocialKind = "x" | "github";
+export type SocialKind = "x" | "telegram" | "discord";
 
 export const SocialMark = ({ kind }: { kind: SocialKind }) => {
   if (kind === "x") {
@@ -26,13 +28,29 @@ export const SocialMark = ({ kind }: { kind: SocialKind }) => {
     );
   }
 
+  if (kind === "telegram") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        className="size-[1.15rem] fill-current"
+      >
+        <path d="M22.4 2.4 1.9 11.1l6.6 2.3L19.4 5.4l-8.6 8.8v5.4l3.3-4 4.7 3.4Z" />
+      </svg>
+    );
+  }
+
   return (
     <svg
       viewBox="0 0 24 24"
       aria-hidden="true"
       className="size-[1.15rem] fill-current"
     >
-      <path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48l-.01-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85l-.01 2.75c0 .27.18.58.69.48A10 10 0 0 0 12 2Z" />
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M8.2 4h7.6a6.2 6.2 0 0 1 6.2 6.2v3.6a6.2 6.2 0 0 1-6.2 6.2H8.2A6.2 6.2 0 0 1 2 13.8v-3.6A6.2 6.2 0 0 1 8.2 4Zm1 5.9a1.7 2.1 0 1 0 0 4.2 1.7 2.1 0 1 0 0-4.2Zm5.6 0a1.7 2.1 0 1 0 0 4.2 1.7 2.1 0 1 0 0-4.2Z"
+      />
     </svg>
   );
 };

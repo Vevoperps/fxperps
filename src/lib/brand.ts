@@ -39,8 +39,12 @@ export const brand = {
     x: null as string | null,
     telegram: null as string | null,
     discord: null as string | null,
-    /** The public repository. Feeds the GitHub mark in the footer. */
-    docs: "https://github.com/Vevoperps/fxperps" as string | null,
+    /**
+     * The public repository. Deliberately null: nothing on the site links to
+     * it. Set it again only if the repository is ever worth reading as part of
+     * the pitch.
+     */
+    docs: null as string | null,
   },
 
   /**
