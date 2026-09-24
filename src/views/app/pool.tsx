@@ -32,9 +32,6 @@ import { PreviewBanner } from "@/views/app/app-shell";
  * total rather than hidden in a footnote.
  */
 
-/** Shares carry 18 decimals whatever the settlement token does. */
-const SHARE_DECIMALS = 18;
-
 export const AppPool = () => {
   const [provide, setProvide] = useState("");
   const [redeem, setRedeem] = useState("");
@@ -47,6 +44,15 @@ export const AppPool = () => {
 
   const live = venue.live && address !== null;
   const wallet = snapshot ? money(snapshot.wallet) : "0.00";
+
+  /**
+   * What this provider can actually take out right now, in settlement tokens.
+   *
+   * Their own position, capped by the pool's free part. Both halves matter: a
+   * provider who owns everything still cannot withdraw liquidity reserved
+   * behind somebody's open position.
+   */
+  const redeemable = Math.min(pool?.value ?? 0, pool?.free ?? 0);
 
   const run = (
     kind: "provide" | "redeem",
@@ -166,31 +172,42 @@ export const AppPool = () => {
                 }
               />
 
-              <Label tone="ink">
-                {app.pool.removeLabel(money(pool?.value ?? 0))}
-              </Label>
+              <Label tone="ink">{app.pool.removeLabel(money(redeemable))}</Label>
               {/*
                 Dead until there is something to redeem. An account holding no
                 shares cannot take anything out, and a field that accepts a
                 number and then fails is worse than one that never invited it:
                 the wallet opens, the node refuses, and the refusal arrives as
                 whatever the wallet chose to call it.
+
+                The ceiling is the smaller of what this provider owns and what
+                the pool has free: liquidity reserved behind an open position
+                cannot come out until that position closes, and offering it
+                would be offering something the contract will refuse.
               */}
               <Row
                 value={redeem}
                 onChange={setRedeem}
-                live={live && BigInt(pool?.shares ?? "0") > 0n}
+                live={live && redeemable > 0}
                 busy={busy !== null}
                 action={app.pool.remove}
                 working={busy === "redeem"}
-                // Shares, not tokens: the engine redeems a share count and
-                // prices it at the moment the transaction lands.
                 onSubmit={() =>
                   run("redeem", () =>
-                    removeLiquidity(toAmount(redeem, SHARE_DECIMALS)),
+                    removeLiquidity(
+                      sharesFor(
+                        Number(redeem) || 0,
+                        pool?.shares ?? "0",
+                        pool?.value ?? 0,
+                      ),
+                    ),
                   )
                 }
-                max={pool ? () => setRedeem(shareText(pool.shares)) : undefined}
+                max={
+                  redeemable > 0
+                    ? () => setRedeem(redeemable.toFixed(decimals))
+                    : undefined
+                }
               />
 
               {problem ? (
@@ -223,17 +240,33 @@ export const AppPool = () => {
   );
 };
 
-/** Shares as a readable decimal, without dragging a formatter into the view. */
-const shareText = (shares: string): string => {
-  const raw = BigInt(shares);
-  const whole = raw / 10n ** BigInt(SHARE_DECIMALS);
-  const fraction = (raw % 10n ** BigInt(SHARE_DECIMALS))
-    .toString()
-    .padStart(SHARE_DECIMALS, "0")
-    .slice(0, 6)
-    .replace(/0+$/, "");
+/**
+ * The share count worth `amount` of this provider's own position.
+ *
+ * **The field says dollars and the engine wants shares.** `removeLiquidity`
+ * redeems a share count, and the first provider into an empty pool is minted
+ * exactly one share whatever they put in — so a position worth twenty dollars
+ * reads as `1`. A field labelled "up to 20.00" that then refuses 20 and
+ * accepts 1 is a trap, and the number it wants is not one anybody could guess.
+ *
+ * So the field takes dollars, like every other field on this screen, and the
+ * conversion happens here. `value` is what this provider's shares are worth, so
+ * the ratio needs nothing from the pool's totals.
+ *
+ * Asking for everything sends the share balance itself rather than a computed
+ * one: a rounded-down conversion would leave a dust share behind, and "redeem
+ * all" that leaves something is the kind of detail people screenshot.
+ */
+const sharesFor = (amount: number, held: string, value: number): bigint => {
+  const shares = BigInt(held);
+  if (shares === 0n || value <= 0 || amount <= 0) return 0n;
+  if (amount >= value) return shares;
 
-  return fraction ? `${whole}.${fraction}` : `${whole}`;
+  // Through an integer ratio rather than float maths on a bigint: the fraction
+  // is the only part that needs the float, and nine digits of it is more
+  // precision than a dollar amount typed into a box can carry.
+  const ratio = BigInt(Math.round((amount / value) * 1e9));
+  return (shares * ratio) / 1_000_000_000n;
 };
 
 /** One amount field and the button that sends it. */
