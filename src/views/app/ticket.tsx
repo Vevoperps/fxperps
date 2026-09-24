@@ -63,11 +63,21 @@ export const Ticket = ({
   mark,
   maxLeverage,
   symbol,
+  warming = false,
 }: {
   mark: number;
   maxLeverage: number;
   /** The pair, as the engine names it. Omitted in the preview. */
   symbol?: string;
+  /**
+   * Quoted, but with no mark on chain yet.
+   *
+   * The rate beside this ticket is real; what is missing is the number the
+   * contract would fill at, which the keeper writes once it knows somebody is
+   * here. A button offered in that window would open a wallet and then revert,
+   * so the ticket says what is happening instead.
+   */
+  warming?: boolean;
 }) => {
   const [side, setSide] = useState<"long" | "short">("long");
   const [margin, setMargin] = useState("100");
@@ -272,6 +282,7 @@ export const Ticket = ({
             chainId={chainId}
             free={snapshot?.free ?? 0}
             posted={figures.posted}
+            warming={warming}
             onConnect={() => void ensureChain()}
             onOpen={onOpen}
           />
@@ -296,6 +307,7 @@ const Action = ({
   chainId,
   free,
   posted,
+  warming,
   onConnect,
   onOpen,
 }: {
@@ -306,6 +318,7 @@ const Action = ({
   chainId: number | null;
   free: number;
   posted: number;
+  warming: boolean;
   onConnect: () => void;
   onOpen: () => void;
 }) => {
@@ -335,6 +348,16 @@ const Action = ({
       <button type="button" onClick={onConnect} className={alive}>
         {/* The chain we are deployed to, not the one the brand is named for. */}
         {app.ticket.switchChain(venue.network.name)}
+      </button>
+    );
+  }
+
+  // Before the balance check: a full balance cannot open a market that has no
+  // price, so "deposit first" would be the wrong sentence to read here.
+  if (warming) {
+    return (
+      <button type="button" disabled className={dead}>
+        {app.ticket.warming}
       </button>
     );
   }

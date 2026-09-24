@@ -151,6 +151,16 @@ export const app = {
     state: {
       preview: "Preview",
       live: "Live",
+      /**
+       * Quoted, not yet fillable.
+       *
+       * The rate on screen is real and moving; what is missing is a mark on
+       * chain, which the keeper writes for a market as soon as somebody turns
+       * up at it. It is a round of the price loop, not an outage, and the
+       * ticket beside it says so in its own words rather than leaving a dead
+       * button to explain itself.
+       */
+      warming: "Warming up",
       paused: "Paused",
       closed: "No price",
     } as Record<string, string>,
@@ -188,6 +198,14 @@ export const app = {
     capNote: (leverage: number) =>
       `capped at ${leverage}x. this pair moves far enough that a higher cap would liquidate on an ordinary day.`,
     action: "Deposits not live yet",
+    /**
+     * The pair is quoted but has no mark on chain yet.
+     *
+     * Not an error and not an outage: the keeper prices a market once it knows
+     * somebody is at it, and the page has just told it. A round of the price
+     * loop, then this button becomes the real one on its own.
+     */
+    warming: "Preparing this market",
 
     /** The live states, in the order a first trade meets them. */
     connect: "Connect a wallet",

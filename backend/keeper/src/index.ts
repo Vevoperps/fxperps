@@ -4,6 +4,7 @@ import {sweep} from "./liquidator.js";
 import {pushPrices} from "./prices.js";
 import {takeSnapshots} from "./snapshots.js";
 import {markets} from "./shared.js";
+import {serveWarm} from "./warm.js";
 
 /**
  * The keeper.
@@ -32,6 +33,10 @@ const main = async (): Promise<void> => {
   console.log(`  keeper     ${signer.address}`);
   console.log(`  gas        ${balance}`);
   console.log(`  markets    ${markets.length}`);
+
+  // Opened before the loops, so a visitor who arrives in the first seconds is
+  // already counted by the time the first round decides what to price.
+  serveWarm();
 
   if (network.chainId !== BigInt(config.CHAIN_ID)) {
     throw new Error(`RPC is chain ${network.chainId}, expected ${config.CHAIN_ID} — check RPC_URL`);

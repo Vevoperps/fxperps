@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { useWarm } from "@/hooks/use-warm";
 import { Label } from "@/components/ui/label";
 import { TypeIn } from "@/components/ui/type-in";
 import { PreviewBanner } from "@/views/app/app-shell";
@@ -60,6 +61,15 @@ export const AppMarket = ({
   useEffect(() => {
     setFallback(marketOf(symbol));
   }, [symbol]);
+
+  // Before the early return below, because a hook cannot be called after one.
+  // The chain rows are the only honest source for this: the static snapshot
+  // carries a status from the generator, which knows nothing about what has a
+  // mark on chain right now.
+  const chainRow = pair
+    ? rows?.find((row) => row.symbol === pair.symbol)
+    : undefined;
+  useWarm(pair?.symbol, onchain && chainRow?.status === "warming");
 
   if (!pair) {
     return (
@@ -200,6 +210,7 @@ export const AppMarket = ({
               mark={mark}
               maxLeverage={pair.maxLeverage}
               symbol={pair.symbol}
+              warming={onchain && live?.status === "warming"}
             />
           </div>
         </div>

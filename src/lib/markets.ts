@@ -35,7 +35,15 @@ export interface Market {
   /** Fractional per 8h. */
   fundingRate: number;
   maxLeverage: number;
-  status: "live" | "paused" | "closed";
+  /**
+   * What this market is doing.
+   *
+   * `warming` is the state the gas budget creates: the pair is quoted and the
+   * rate on screen is real, but no mark has been posted on chain for it yet,
+   * so nothing can fill against it until the keeper writes one. It is a few
+   * seconds, not an outage, and the ticket says which it is.
+   */
+  status: "live" | "warming" | "paused" | "closed";
   /** Notional on each side, when the feed is the chain. */
   longOpenInterest?: number;
   shortOpenInterest?: number;

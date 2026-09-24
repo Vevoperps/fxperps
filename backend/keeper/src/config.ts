@@ -99,6 +99,22 @@ const schema = z.object({
    * position.
    */
   ACTIVE_REFRESH: z.coerce.number().int().positive().default(120),
+
+  /**
+   * The shared secret the site presents when it asks for a pair to be warmed.
+   *
+   * Absent, the endpoint is not opened at all and the keeper prices only what
+   * carries risk plus `ALWAYS_FRESH` — which is a working venue, just one
+   * where an untouched pair stays untradeable until somebody opens one of the
+   * majors. Set it on both sides to close that gap.
+   */
+  WARM_SECRET: z.string().min(16).optional(),
+
+  /** How long one visitor's interest keeps a pair priced, in seconds. */
+  WARM_TTL: z.coerce.number().int().positive().default(600),
+
+  /** Railway hands this over; locally it just needs somewhere to listen. */
+  PORT: z.coerce.number().int().positive().default(8080),
 });
 
 const parsed = schema.safeParse(process.env);

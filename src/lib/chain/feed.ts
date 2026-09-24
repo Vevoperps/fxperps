@@ -1,6 +1,7 @@
 import { PAIRS, type Market, readMarks } from "@/lib/markets";
 
 import { readChainMarkets } from "./read";
+import { readRates } from "./rates";
 import { venue } from "./venue";
 
 /**
@@ -59,18 +60,30 @@ export const readFeed = async (): Promise<Feed> => {
   if (!venue.live) return { markets: readMarks(), onchain: false };
 
   try {
-    const rows = await readChainMarkets(PAIRS.map((pair) => pair.symbol));
+    // Both at once: the chain read decides what can be traded, the rate read
+    // decides what can be shown, and one waiting on the other would double the
+    // slowest part of a route that is polled every fifteen seconds.
+    const [rows, rates] = await Promise.all([
+      readChainMarkets(PAIRS.map((pair) => pair.symbol)),
+      readRates(),
+    ]);
 
     const now = Math.floor(Date.now() / 1000);
 
     const markets = rows.map((row, index) => {
       const pair = PAIRS[index] as (typeof PAIRS)[number];
-      const moved = changeFrom(
-        row.mark,
-        row.referencePrice,
-        row.referenceAt,
-        now,
-      );
+
+      // The chain's mark when it has one, the live rate when it does not.
+      // `pair.base` is the last resort and it is a number out of a config
+      // file, so it is used only when both the chain and the feed are silent —
+      // at which point the status below says so rather than dressing it up.
+      const quoted = rates.by.get(pair.symbol);
+      const mark = row.priced ? row.mark : (quoted ?? pair.base);
+      const known = row.priced || quoted !== undefined;
+
+      const moved = known
+        ? changeFrom(mark, row.referencePrice, row.referenceAt, now)
+        : { change24h: 0, changeKnown: false };
 
       return {
         id: pair.symbol.toLowerCase(),
@@ -78,17 +91,23 @@ export const readFeed = async (): Promise<Feed> => {
         name: pair.name,
         flag: pair.flag,
         type: "fx" as const,
-        mark: row.priced ? row.mark : pair.base,
-        ...(row.priced ? moved : { change24h: 0, changeKnown: false }),
+        mark,
+        ...moved,
         fundingRate: row.fundingRate,
         maxLeverage: row.maxLeverage || pair.maxLeverage,
+        // Four states, and the difference between the middle two is the whole
+        // point: `warming` is quoted and about to be tradeable, `closed` is
+        // nothing to show. Calling the first one closed is what made sixty-one
+        // working markets look shut.
         status: !row.listed
           ? ("closed" as const)
           : row.paused
             ? ("paused" as const)
             : row.priced
               ? ("live" as const)
-              : ("closed" as const),
+              : quoted !== undefined
+                ? ("warming" as const)
+                : ("closed" as const),
         longOpenInterest: row.longOpenInterest,
         shortOpenInterest: row.shortOpenInterest,
       } satisfies Market;
