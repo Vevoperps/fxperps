@@ -23,6 +23,20 @@ import { z } from "zod";
 const optionalUrl = () =>
   z.preprocess((v) => (v === "" ? undefined : v), z.url().optional());
 
+/**
+ * Accepts a bare host where a URL is meant.
+ *
+ * Railway, Vercel and every other dashboard hands you the domain without a
+ * scheme — `vevo-keeper.up.railway.app` — and pasting exactly what was shown
+ * is the obvious thing to do. Rejecting it teaches nothing; there is only one
+ * scheme it could mean.
+ */
+const withScheme = (v: unknown): unknown => {
+  if (typeof v !== "string" || v.trim() === "") return undefined;
+  const value = v.trim();
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+};
+
 const publicSchema = z.object({
   NEXT_PUBLIC_SITE_URL: optionalUrl(),
 });
@@ -53,7 +67,7 @@ const serverSchema = z.object({
    * Server-only, and deliberately not `NEXT_PUBLIC_`: the browser asks this
    * app, this app asks the keeper. A secret that reaches a bundle is not one.
    */
-  KEEPER_URL: optionalUrl(),
+  KEEPER_URL: z.preprocess(withScheme, z.url().optional()),
   WARM_SECRET: z.preprocess(
     (v) => (v === "" ? undefined : v),
     z.string().min(16).optional(),
@@ -72,11 +86,44 @@ let cachedServerEnv: z.infer<typeof serverSchema> | undefined;
  * lazily so the client bundle never evaluates it.
  */
 export function getServerEnv() {
-  cachedServerEnv ??= serverSchema.parse({
+  if (cachedServerEnv) return cachedServerEnv;
+
+  const raw: Record<string, unknown> = {
     CONTACT_ENDPOINT: process.env.CONTACT_ENDPOINT,
     FX_URL: process.env.FX_URL,
     KEEPER_URL: process.env.KEEPER_URL,
     WARM_SECRET: process.env.WARM_SECRET,
-  });
+  };
+
+  const first = serverSchema.safeParse(raw);
+  if (first.success) {
+    cachedServerEnv = first.data;
+    return cachedServerEnv;
+  }
+
+  /**
+   * One bad optional variable must not take the others down with it.
+   *
+   * Every field here is optional or has a default, and they belong to
+   * unrelated features. Parsing them as one object meant a mistyped
+   * `KEEPER_URL` — a Railway domain pasted without its scheme — threw inside
+   * `getServerEnv()`, and every caller inherited it: the rates reader caught
+   * the throw, returned nothing, and sixty-one markets quietly showed their
+   * placeholder price. The cause and the symptom were in different features
+   * and nothing on screen connected them.
+   *
+   * So a field that will not parse is dropped, loudly, and the rest stand.
+   * The feature that needed it degrades on its own terms — warming simply
+   * does not happen — which is the failure the code already handles.
+   */
+  for (const issue of first.error.issues) {
+    const key = issue.path[0];
+    if (typeof key === "string") {
+      console.error(`[env] ignoring ${key}: ${issue.message}`);
+      delete raw[key];
+    }
+  }
+
+  cachedServerEnv = serverSchema.parse(raw);
   return cachedServerEnv;
 }
