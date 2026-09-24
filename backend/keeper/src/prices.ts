@@ -1,6 +1,7 @@
 import {Contract} from "ethers";
 
-import {explain, marketId, provider, signer} from "./chain.js";
+import {activeSymbols} from "./active.js";
+import {explain, marketId, oneAtATime, provider, signer} from "./chain.js";
 import {hermes} from "./hermes.js";
 import {config, oracleKind, usingMockOracle} from "./config.js";
 import {fetchMarks, quoteAge} from "./fx.js";
@@ -123,8 +124,10 @@ export const pushPrices = async (): Promise<void> => {
   const data = update.binary.data.map((hex) => (hex.startsWith("0x") ? hex : `0x${hex}`));
 
   const fee = await pyth.getUpdateFee(data);
-  const transaction = await pyth.updatePriceFeeds(data, {value: fee});
-  const receipt = await transaction.wait();
+  const receipt = await oneAtATime(async () => {
+    const transaction = await pyth.updatePriceFeeds(data, {value: fee});
+    return transaction.wait();
+  });
 
   console.log(`[prices] ${feeds.length} feeds posted, fee ${fee}, block ${receipt?.blockNumber ?? "?"}`);
 };
@@ -226,27 +229,43 @@ const worthPosting = async (marks: Mark[]): Promise<Mark[]> => {
 };
 
 const postMarks = async (): Promise<void> => {
-  const marks = await fetchMarks();
-  if (marks.length === 0) {
+  const all = await fetchMarks();
+  if (all.length === 0) {
     console.warn("[prices] the fx source returned nothing usable — nothing posted");
+    return;
+  }
+
+  // Only the pairs an on-chain mark is load bearing for. See `active.ts`: this
+  // one filter is the difference between a venue that costs a hundred dollars
+  // a day to price and one that costs four.
+  const active = await activeSymbols();
+  const marks = all.filter((mark) => active.has(mark.symbol));
+
+  if (marks.length === 0) {
+    console.log(`[prices] PUSH oracle: no active market to price, ${all.length} pairs left alone`);
     return;
   }
 
   const posting = await worthPosting(marks);
 
   if (posting.length === 0) {
-    console.log(`[prices] PUSH oracle: nothing moved, ${marks.length} marks left as they are`);
+    console.log(
+      `[prices] PUSH oracle: nothing moved, ${marks.length} of ${all.length} active and left as they are`,
+    );
     return;
   }
 
   const ids = posting.map((mark) => marketId(mark.symbol));
   const values = posting.map((mark) => mark.value);
 
-  const transaction = await push().postMarks(ids, values);
-  const receipt = await transaction.wait();
+  const receipt = await oneAtATime(async () => {
+    const transaction = await push().postMarks(ids, values);
+    return transaction.wait();
+  });
 
   console.log(
-    `[prices] PUSH oracle: ${posting.length} of ${marks.length} marks posted, ` +
+    `[prices] PUSH oracle: ${posting.length} of ${marks.length} active marks posted ` +
+      `(${all.length} pairs listed), ` +
       `quote ${quoteAge()}s old, block ${receipt?.blockNumber ?? "?"}`,
   );
 };

@@ -1,6 +1,6 @@
 import type {EventLog, Log} from "ethers";
 
-import {engine, explain, marketIds, provider} from "./chain.js";
+import {engine, explain, marketIds, oneAtATime, provider} from "./chain.js";
 import {config} from "./config.js";
 
 /**
@@ -108,8 +108,10 @@ export const sweep = async (): Promise<void> => {
     }
 
     try {
-      const transaction = await engine.liquidate(position.account, position.market);
-      const receipt = await transaction.wait();
+      const receipt = await oneAtATime(async () => {
+        const transaction = await engine.liquidate(position.account, position.market);
+        return transaction.wait();
+      });
       open.delete(key(position.account, position.market));
       closed += 1;
       console.log(`[liq] ${symbol} ${position.account} closed in block ${receipt?.blockNumber ?? "?"}`);

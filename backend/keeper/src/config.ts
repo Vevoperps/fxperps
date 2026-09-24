@@ -65,6 +65,40 @@ const schema = z.object({
    * rule, which refreshes a mark before it can go stale regardless.
    */
   MIN_MOVE_BPS: z.coerce.number().int().nonnegative().default(2),
+
+  /**
+   * The pairs whose mark is kept fresh on chain no matter what.
+   *
+   * A mark only has to be on chain for a market somebody is about to trade or
+   * is already in. The other sixty-odd are browsed, not filled, and the rates
+   * a visitor browses come from the same feed this keeper reads — no
+   * transaction required. Keeping all of them warm costs a full refresh of
+   * every pair twice a staleness window, forever, whether anyone trades or
+   * not, and that is the single largest line in this venue's running cost.
+   *
+   * So the keeper writes only what matters: whatever carries open interest,
+   * plus this list, so the doors a visitor is most likely to walk through are
+   * already open when they arrive.
+   */
+  ALWAYS_FRESH: z
+    .string()
+    .default("USDJPY,USDEUR,USDGBP")
+    .transform((value) =>
+      value
+        .split(",")
+        .map((symbol) => symbol.trim().toUpperCase())
+        .filter((symbol) => symbol.length > 0),
+    ),
+
+  /**
+   * How often the open-interest read behind that set is refreshed, in seconds.
+   *
+   * It is one `eth_call` for all sixty-four markets, so this is cheap; it is
+   * cached only so a fifteen-second price loop does not make the same call
+   * four times a minute for an answer that changes when somebody opens a
+   * position.
+   */
+  ACTIVE_REFRESH: z.coerce.number().int().positive().default(120),
 });
 
 const parsed = schema.safeParse(process.env);

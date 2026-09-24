@@ -1,4 +1,4 @@
-import {engine, explain, marketId, provider, signer} from "./chain.js";
+import {engine, explain, marketId, oneAtATime, provider, signer} from "./chain.js";
 import {markets} from "./shared.js";
 
 /**
@@ -20,19 +20,13 @@ import {markets} from "./shared.js";
  */
 
 export const takeSnapshots = async (): Promise<void> => {
-  const pending: Array<{symbol: string; wait: () => Promise<unknown>}> = [];
+  /** In flight at once. Enough to be quick, few enough to stay predictable. */
+  const BATCH = 8;
+
+  const due: string[] = [];
 
   let notDue = 0;
   let unpriced = 0;
-
-  // The nonce is counted here rather than asked for per transaction.
-  //
-  // ethers reads the account's pending count before each send, and a node
-  // answering that question while thirty transactions are still in flight
-  // answers with a number it has not caught up to — so two of them leave with
-  // the same nonce and the second is rejected. Reading it once and counting up
-  // is the whole fix. A send that fails does not consume one.
-  let nonce = await provider.getTransactionCount(signer.address, "pending");
 
   for (const market of markets) {
     const id = marketId(market.symbol);
@@ -40,47 +34,81 @@ export const takeSnapshots = async (): Promise<void> => {
     try {
       // The transaction, run without sending it: `true` means the window is up
       // and the oracle can price this market right now.
-      const due = await engine.snapshot.staticCall(id);
-      if (!due) {
+      if (await engine.snapshot.staticCall(id)) {
+        due.push(market.symbol);
+      } else {
         notDue += 1;
-        continue;
       }
     } catch {
       // An unwired or stale feed reverts here — a different thing entirely
       // from a window that has not come round, and counted separately because
       // confusing the two hides an oracle that has stopped.
       unpriced += 1;
-      continue;
-    }
-
-    try {
-      // Sent, not awaited to completion. The first run of a fresh deployment
-      // has sixty-four references to take, and waiting for each receipt in
-      // turn took longer than the oracle's own staleness window — the marks
-      // went stale halfway through the loop and the rest of the round failed
-      // on a price it had just posted. Sending first and collecting the
-      // receipts afterwards turns minutes into seconds.
-      const transaction = await engine.snapshot(id, {nonce});
-      nonce += 1;
-      pending.push({symbol: market.symbol, wait: () => transaction.wait()});
-    } catch (error) {
-      console.error(`[ref] ${market.symbol}: ${explain(error)}`);
     }
   }
 
   let taken = 0;
+  let failed = 0;
 
-  for (const one of pending) {
-    try {
-      await one.wait();
-      taken += 1;
-    } catch (error) {
-      console.error(`[ref] ${one.symbol}: ${explain(error)}`);
+  /**
+   * Sent in small batches rather than one at a time or all at once.
+   *
+   * One at a time took longer than the oracle's own staleness window on a
+   * fresh deployment with sixty-four references to take — the marks went
+   * stale halfway through and the rest of the round failed on a price the
+   * keeper had posted a minute earlier. All at once collides on nonces: the
+   * node answers "how many transactions does this account have" with a number
+   * it has not caught up to. A small batch, with its nonces counted here and
+   * its receipts collected before the next one starts, has neither problem.
+   */
+  for (let i = 0; i < due.length; i += BATCH) {
+    const slice = due.slice(i, i + BATCH);
+
+    // The whole batch is one job on the wallet's queue: the nonces are read,
+    // spent and confirmed with nothing else signing in between. Read outside
+    // the queue, as it was, and a price post landing in the gap invalidated
+    // every nonce in the run at once.
+    const results = await oneAtATime(async () => {
+      const base = await provider.getTransactionCount(signer.address, "latest");
+
+      const sent = await Promise.all(
+        slice.map(async (symbol, offset) => {
+          try {
+            const transaction = await engine.snapshot(marketId(symbol), {nonce: base + offset});
+            return {symbol, transaction};
+          } catch (error) {
+            console.error(`[ref] ${symbol}: ${explain(error)}`);
+            return null;
+          }
+        }),
+      );
+
+      const settled: boolean[] = [];
+      for (const one of sent) {
+        if (!one) {
+          settled.push(false);
+          continue;
+        }
+        try {
+          await one.transaction.wait();
+          settled.push(true);
+        } catch (error) {
+          settled.push(false);
+          console.error(`[ref] ${one.symbol}: ${explain(error)}`);
+        }
+      }
+      return settled;
+    });
+
+    for (const ok of results) {
+      if (ok) taken += 1;
+      else failed += 1;
     }
   }
 
-  if (taken > 0 || unpriced > 0) {
+  if (taken > 0 || failed > 0 || unpriced > 0) {
     const parts = [`${taken} refreshed`, `${notDue} not due`];
+    if (failed > 0) parts.push(`${failed} failed`);
     if (unpriced > 0) parts.push(`${unpriced} unpriced or stale`);
     console.log(`[ref] ${parts.join(", ")}`);
   }
